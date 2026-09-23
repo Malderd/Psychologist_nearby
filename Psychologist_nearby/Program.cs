@@ -60,4 +60,27 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
+var reglamentPath = Path.Combine(app.Environment.ContentRootPath, "..", "reglament.txt");
+if (File.Exists(reglamentPath))
+{
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine("========================================");
+    Console.WriteLine("        РЕГЛАМЕНТ РАЗРАБОТКИ            ");
+    Console.WriteLine("========================================");
+    Console.ResetColor();
+
+    Console.WriteLine(File.ReadAllText(reglamentPath));
+
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine("========================================\n");
+    Console.ResetColor();
+}
+else
+{
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine($"[Предупреждение]: Файл регламента не найден по пути: {reglamentPath}\n");
+    Console.ResetColor();
+}
+
+
 app.Run();
