@@ -1,6 +1,6 @@
 /* Шапка сайта */
 .top-nav {
-    background-color: #1e293b;
+    background-color: #665A4C;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     position: sticky;
     top: 0;
@@ -55,9 +55,9 @@
 /* Ссылки меню */
 .nav-item,
 ::deep a.nav-item {
-    color: #cbd5e1;
-    font-size: 0.95rem;
-    font-weight: 500;
+    color: #FFFFFF;
+    font-size: 1.05rem;
+    font-weight: 700;
     text-decoration: none;
     padding: 0.5rem 0.85rem;
     border-radius: 6px;
