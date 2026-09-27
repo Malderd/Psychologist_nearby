@@ -15,34 +15,48 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Регистрация</PageTitle>
 
-<h1>Register</h1>
+<div style="background-color: #6d7466; min-height: 100vh; width: 100vw; margin-left: calc(-50vw + 50%); padding: 40px 20px; box-sizing: border-box; display: flex; justify-content: center; align-items: center;">
 
-<div class="row">
-    <div class="col-md-4">
+    <div style="background-color: #C6BBAA; max-width: 450px; width: 100%; border-radius: 12px; padding: 40px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); color: #2B2621;">
+
+        <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 24px; text-align: center; color: #2B2621;">Регистрация</h1>
+
         <StatusMessage Message="@Message" />
+
         <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label for="email">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
+
+            <ValidationSummary style="color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 8px; margin-bottom: 15px;" role="alert" />
+
+            <div style="margin-bottom: 20px;">
+                <label for="email" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Email</label>
+                <InputText @bind-Value="Input.Email" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background-color: rgba(255,255,255,0.7); box-sizing: border-box; outline: none; font-size: 1rem;" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <ValidationMessage For="() => Input.Email" style="color: #721c24; font-size: 0.85rem; margin-top: 4px;" />
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="password">Password</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger" />
+
+            <div style="margin-bottom: 20px;">
+                <label for="password" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Пароль</label>
+                <InputText type="password" @bind-Value="Input.Password" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background-color: rgba(255,255,255,0.7); box-sizing: border-box; outline: none; font-size: 1rem;" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                <ValidationMessage For="() => Input.Password" style="color: #721c24; font-size: 0.85rem; margin-top: 4px;" />
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="confirm-password">Confirm Password</label>
-                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+
+            <div style="margin-bottom: 24px;">
+                <label for="confirm-password" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Подтверждение пароля</label>
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background-color: rgba(255,255,255,0.7); box-sizing: border-box; outline: none; font-size: 1rem;" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                <ValidationMessage For="() => Input.ConfirmPassword" style="color: #721c24; font-size: 0.85rem; margin-top: 4px;" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+
+            <button type="submit" style="width: 100%; padding: 12px 20px; cursor: pointer; background: #665A4C; color: #FFFFFF; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; transition: opacity 0.2s ease;">
+                Зарегистрироваться
+            </button>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" style="color: #4A4035; font-weight: 600; text-decoration: underline; font-size: 0.95rem;">
+                    Уже есть аккаунт? Войти
+                </a>
+            </div>
         </EditForm>
     </div>
 </div>
@@ -56,7 +70,7 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+    private string? Message => identityErrors is null ? null : $"Ошибка: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
     public async Task RegisterUser(EditContext editContext)
     {
@@ -125,14 +139,14 @@
         public string Email { get; set; } = "";
 
         [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [StringLength(100, ErrorMessage = "Длина {0} должна быть от {2} до {1} символов.", MinimumLength = 6)]
         [DataType(DataType.Password)]
         [Display(Name = "Password")]
         public string Password { get; set; } = "";
 
         [DataType(DataType.Password)]
         [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        [Compare("Password", ErrorMessage = "Пароли не совпадают.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }
