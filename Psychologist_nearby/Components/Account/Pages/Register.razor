@@ -19,12 +19,8 @@
 
         <h1 class="register-title">Регистрация</h1>
 
-        <StatusMessage Message="@Message" />
-
         <EditForm Model="Input" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
-
-            <ValidationSummary role="alert" />
 
             <div class="form-group">
                 <label for="email" class="form-label">Email</label>
@@ -114,20 +110,21 @@
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Введите e-mail")]
+        [EmailAddress(ErrorMessage = "Введите корректный адрес электронной почты")]
         [Display(Name = "Email")]
         public string Email { get; set; } = "";
 
-        [Required]
+        [Required(ErrorMessage = "Введите пароль")]
         [StringLength(100, ErrorMessage = "{0} должен быть длиной от {2} до {1} символов.", MinimumLength = 6)]
         [DataType(DataType.Password)]
         [Display(Name = "Пароль")]
         public string Password { get; set; } = "";
 
+        [Required(ErrorMessage = "Подтвердите пароль")]
         [DataType(DataType.Password)]
         [Display(Name = "Подтверждение пароля")]
-        [Compare("Password", ErrorMessage = "Пароль и его подтверждение не совпадают.")]
+        [Compare("Password", ErrorMessage = "Пароли не совпадают.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }
