@@ -116,7 +116,7 @@
         public string Email { get; set; } = "";
 
         [Required(ErrorMessage = "Введите пароль")]
-        [StringLength(100, ErrorMessage = "{0} должен быть длиной от {2} до {1} символов.", MinimumLength = 6)]
+        [StringLength(40, MinimumLength = 6, ErrorMessage = "{0} должен быть длиной от {2} до {1} символов.")]
         [DataType(DataType.Password)]
         [Display(Name = "Пароль")]
         public string Password { get; set; } = "";
