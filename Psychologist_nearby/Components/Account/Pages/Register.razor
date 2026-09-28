@@ -1,59 +1,55 @@
 @page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
-@using System.Text
-@using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.WebUtilities
 @using Psychologist_nearby.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
-@inject IEmailSender<ApplicationUser> EmailSender
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Регистрация</PageTitle>
 
-<div style="background-color: #6d7466; min-height: 100vh; width: 100vw; margin-left: calc(-50vw + 50%); padding: 40px 20px; box-sizing: border-box; display: flex; justify-content: center; align-items: center;">
+<div class="register-page-container">
 
-    <div style="background-color: #C6BBAA; max-width: 450px; width: 100%; border-radius: 12px; padding: 40px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); color: #2B2621;">
+    <div class="register-card">
 
-        <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 24px; text-align: center; color: #2B2621;">Регистрация</h1>
+        <h1 class="register-title">Регистрация</h1>
 
         <StatusMessage Message="@Message" />
 
-        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+        <EditForm Model="Input" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
 
-            <ValidationSummary style="color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 8px; margin-bottom: 15px;" role="alert" />
+            <ValidationSummary role="alert" />
 
-            <div style="margin-bottom: 20px;">
-                <label for="email" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Email</label>
-                <InputText @bind-Value="Input.Email" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background-color: rgba(255,255,255,0.7); box-sizing: border-box; outline: none; font-size: 1rem;" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <ValidationMessage For="() => Input.Email" style="color: #721c24; font-size: 0.85rem; margin-top: 4px;" />
+            <div class="form-group">
+                <label for="email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <ValidationMessage For="() => Input.Email" />
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <label for="password" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Пароль</label>
-                <InputText type="password" @bind-Value="Input.Password" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background-color: rgba(255,255,255,0.7); box-sizing: border-box; outline: none; font-size: 1rem;" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
-                <ValidationMessage For="() => Input.Password" style="color: #721c24; font-size: 0.85rem; margin-top: 4px;" />
+            <div class="form-group">
+                <label for="password" class="form-label">Пароль</label>
+                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                <ValidationMessage For="() => Input.Password" />
             </div>
 
-            <div style="margin-bottom: 24px;">
-                <label for="confirm-password" style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Подтверждение пароля</label>
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background-color: rgba(255,255,255,0.7); box-sizing: border-box; outline: none; font-size: 1rem;" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
-                <ValidationMessage For="() => Input.ConfirmPassword" style="color: #721c24; font-size: 0.85rem; margin-top: 4px;" />
+            <div class="form-group">
+                <label for="confirm-password" class="form-label">Подтвердите пароль</label>
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                <ValidationMessage For="() => Input.ConfirmPassword" />
             </div>
 
-            <button type="submit" style="width: 100%; padding: 12px 20px; cursor: pointer; background: #665A4C; color: #FFFFFF; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; transition: opacity 0.2s ease;">
+            <button type="submit" class="btn-submit">
                 Зарегистрироваться
             </button>
 
-            <div style="text-align: center; margin-top: 20px;">
-                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" style="color: #4A4035; font-weight: 600; text-decoration: underline; font-size: 0.95rem;">
+            <div class="login-link-container">
+                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="login-link">
                     Уже есть аккаунт? Войти
                 </a>
             </div>
@@ -72,13 +68,14 @@
 
     private string? Message => identityErrors is null ? null : $"Ошибка: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-    public async Task RegisterUser(EditContext editContext)
+    public async Task RegisterUser()
     {
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
         var result = await UserManager.CreateAsync(user, Input.Password);
 
         if (!result.Succeeded)
@@ -87,23 +84,7 @@
             return;
         }
 
-        Logger.LogInformation("User created a new account with password.");
-
-        var userId = await UserManager.GetUserIdAsync(user);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
-        {
-            RedirectManager.RedirectTo(
-                "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
-        }
+        Logger.LogInformation("Пользователь создал новый аккаунт с паролем.");
 
         await SignInManager.SignInAsync(user, isPersistent: false);
         RedirectManager.RedirectTo(ReturnUrl);
@@ -117,8 +98,8 @@
         }
         catch
         {
-            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+            throw new InvalidOperationException($"Не удалось создать экземпляр '{nameof(ApplicationUser)}'. " +
+                $"Убедитесь, что '{nameof(ApplicationUser)}' не является абстрактным классом и имеет конструктор без параметров.");
         }
     }
 
@@ -126,7 +107,7 @@
     {
         if (!UserManager.SupportsUserEmail)
         {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
+            throw new NotSupportedException("Стандартный UI требует хранилище пользователей с поддержкой email.");
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }
@@ -139,14 +120,14 @@
         public string Email { get; set; } = "";
 
         [Required]
-        [StringLength(100, ErrorMessage = "Длина {0} должна быть от {2} до {1} символов.", MinimumLength = 6)]
+        [StringLength(100, ErrorMessage = "{0} должен быть длиной от {2} до {1} символов.", MinimumLength = 6)]
         [DataType(DataType.Password)]
-        [Display(Name = "Password")]
+        [Display(Name = "Пароль")]
         public string Password { get; set; } = "";
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "Пароли не совпадают.")]
+        [Display(Name = "Подтверждение пароля")]
+        [Compare("Password", ErrorMessage = "Пароль и его подтверждение не совпадают.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }
