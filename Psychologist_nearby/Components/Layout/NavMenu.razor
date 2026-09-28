@@ -1,26 +1,21 @@
 <header class="top-nav">
     <div class="nav-container">
-        <!-- Заголовок -->
         <a class="nav-brand" href="">Психолог рядом</a>
 
-        <!-- Кнопка мобильного меню -->
         <button class="nav-toggle" type="button" @onclick="() => isMenuOpen = !isMenuOpen" aria-label="Открыть меню">
             <span class="toggle-icon"></span>
         </button>
 
-        <!-- Основная навигация -->
         <div class="nav-menu @(isMenuOpen ? "open" : "")">
-            <!-- Ссылки сайта -->
             <nav class="nav-links">
-                <NavLink class="nav-item">Обо мне</NavLink>
-                <NavLink class="nav-item">Запросы</NavLink>
-                <NavLink class="nav-item">Отзывы</NavLink>
-                <NavLink class="nav-item">Стоимость</NavLink>
-                <NavLink class="nav-item">Тестирование</NavLink>
-                <NavLink class="nav-item">Контакты</NavLink>
+                <a class="nav-item" href="#about">Обо мне</a>
+                <a class="nav-item" href="#requests">Запросы</a>
+                <a class="nav-item" href="#reviews">Отзывы</a>
+                <a class="nav-item" href="#price">Стоимость</a>
+                <a class="nav-item" href="#testing">Тестирование</a>
+                <a class="nav-item" href="#contacts">Контакты</a>
             </nav>
 
-            <!-- Авторизация справа -->
             <div class="auth-links">
                 <AuthorizeView>
                     <Authorized>
