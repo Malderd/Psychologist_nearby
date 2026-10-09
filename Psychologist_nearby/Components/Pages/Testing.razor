@@ -1,0 +1,50 @@
+@page "/testing"
+
+<PageTitle>Тестирование</PageTitle>
+
+<div class="testing-page">
+
+    <h1 class="testing-title">Тестирование</h1>
+
+    <div class="testing-card-container">
+
+        <!-- Левая часть: Иллюстрация и Кнопка -->
+        <div class="testing-left-col">
+            <div class="testing-image-wrapper">
+                <img src="images/hands.jpg" alt="Иллюстрация" class="testing-image" />
+            </div>
+
+            <button @onclick="StartTest" class="btn-start-test">
+                начать тестирование
+            </button>
+        </div>
+
+        <!-- Правая часть: Увеличенная карточка с текстом -->
+        <div class="testing-right-col">
+            <div>
+                <h2 class="testing-description">
+                    Расширенная диагностика по всем уровням треугольника нейроинтеграции
+                </h2>
+            </div>
+
+            <div class="testing-info-row">
+                <div class="testing-info-block text-left">
+                    <div class="testing-info-label">на прохождение</div>
+                    <div class="testing-info-value">20 мин</div>
+                </div>
+                <div class="testing-info-block text-right">
+                    <div class="testing-info-label">вопросов</div>
+                    <div class="testing-info-value">75</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private void StartTest()
+    {
+
+    }
+}
