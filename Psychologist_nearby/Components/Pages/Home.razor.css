@@ -91,16 +91,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh;
+    min-height: 80vh;
     scroll-margin-top: 80px;
 }
 
 .default-section {
-    padding-top: 50px;
+    padding-top: 80px;
 }
 
 .requests-section {
-    padding-top: 50px;
+    padding-top: 80px;
 }
 
 .section-title {
@@ -160,4 +160,252 @@
     background-color: rgba(255, 255, 255, 0.4);
     padding: 20px;
     border-radius: 8px;
+}
+
+.about-card {
+    background-color: #C6BBAA;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 20px;
+    padding: 35px 40px;
+    color: #4A4238;
+    box-sizing: border-box;
+}
+
+.about-text {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.about-highlights {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.highlight-item {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.carousel-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 85%;
+    max-width: 850px;
+    gap: 20px;
+}
+
+.review-card {
+    background-color: #C6BBAA;
+    border-radius: 20px;
+    padding: 40px;
+    flex: 1;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.review-text {
+    font-size: 1.3rem;
+    font-style: italic;
+    color: #4A4238;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.review-author {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #2D2721;
+    text-align: right;
+    margin-top: 20px;
+}
+
+.carousel-btn {
+    background-color: #665A4C;
+    color: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .carousel-btn:hover {
+        background-color: #584c3f;
+    }
+
+.carousel-dots {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+    .dot.active {
+        background-color: #FFFFFF;
+    }
+
+.price-cards-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+    width: 85%;
+    max-width: 1100px;
+}
+
+.price-card {
+    background-color: #C6BBAA;
+    border-radius: 24px;
+    padding: 35px 25px;
+    flex: 1;
+    min-width: 260px;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+    .price-card.featured {
+        border: 3px solid #665A4C;
+        transform: scale(1.03);
+    }
+
+.badge {
+    position: absolute;
+    top: -15px;
+    background-color: #665A4C;
+    color: white;
+    padding: 4px 15px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.price-card h3 {
+    font-size: 1.4rem;
+    color: #4A4238;
+    margin-top: 10px;
+}
+
+.price-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2D2721;
+    margin: 15px 0;
+}
+
+.price-desc {
+    font-size: 1rem;
+    color: #4A4238;
+    line-height: 1.4;
+    margin-bottom: 25px;
+}
+
+.btn-price {
+    background-color: #665A4C;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 16px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.2s;
+}
+
+    .btn-price:hover {
+        background-color: #584c3f;
+    }
+
+.contacts-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+    width: 85%;
+    max-width: 900px;
+}
+
+.contacts-info {
+    flex: 1;
+    min-width: 280px;
+    color: white;
+}
+
+    .contacts-info h3 {
+        font-size: 1.8rem;
+        margin-top: 0;
+    }
+
+.contact-links {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.contact-link {
+    padding: 12px 20px;
+    border-radius: 14px;
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    background-color: #665A4C;
+}
+
+.contacts-form-box {
+    flex: 1.2;
+    min-width: 300px;
+    background-color: #C6BBAA;
+    padding: 30px;
+    border-radius: 20px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 15px;
+    border-radius: 12px;
+    border: none;
+    box-sizing: border-box;
+    font-size: 1rem;
+    outline: none;
+}
+
+.textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 14px;
+    background-color: #665A4C;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
 }
