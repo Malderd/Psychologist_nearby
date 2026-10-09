@@ -28,7 +28,7 @@
 }
 
     .nav-brand:hover {
-        color: #38bdf8;
+        color: #3A332B;
     }
 
 /* Блок навигации */
@@ -106,13 +106,13 @@
     .btn-logout:hover {
         background: rgba(255, 255, 255, 0.1);
         color: #ffffff;
-        border-color: #94a3b8;
+        border-color: #3A332B;
     }
 
 /* Кнопка Войти */
 .btn-login,
 ::deep a.btn-login {
-    background-color: #0284c7;
+    background-color: #3A332B;
     color: #ffffff;
     font-size: 0.875rem;
     font-weight: 600;
