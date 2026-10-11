@@ -1,23 +1,23 @@
 @page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using Psychologist_nearby.Data
 
-@inject UserManager<ApplicationUser> UserManager
-@inject IUserStore<ApplicationUser> UserStore
-@inject SignInManager<ApplicationUser> SignInManager
+@inject ApplicationDbContext DbContext
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
-@inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Регистрация</PageTitle>
 
 <div class="register-page-container">
-
     <div class="register-card">
-
         <h1 class="register-title">Регистрация</h1>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
 
         <EditForm Model="Input" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
@@ -54,7 +54,7 @@
 </div>
 
 @code {
-    private IEnumerable<IdentityError>? identityErrors;
+    private string? errorMessage;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
@@ -62,61 +62,131 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Ошибка: {string.Join(", ", identityErrors.Select(error => error.Description))}";
-
     public async Task RegisterUser()
     {
-        var user = CreateUser();
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-        var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        string? loginUrl = null;
 
-        var result = await UserManager.CreateAsync(user, Input.Password);
-
-        if (!result.Succeeded)
+        try
         {
-            identityErrors = result.Errors;
+            string email = Input.Email.Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(email) ||
+            !new EmailAddressAttribute().IsValid(email))
+            {
+                errorMessage = "Введите корректный адрес электронной почты.";
+                return;
+            }
+
+            if (email.Length > 100)
+            {
+                errorMessage = "Почта не должна содержать больше 100 символов.";
+                return;
+            }
+
+            if (Input.Password.Length < 8 || Input.Password.Length > 40)
+            {
+                errorMessage = "Пароль должен содержать от 8 до 40 символов.";
+                return;
+            }
+
+            if (!Input.Password.Any(char.IsUpper))
+            {
+                errorMessage = "Пароль должен содержать хотя бы одну заглавную букву.";
+                return;
+            }
+
+            if (!Input.Password.Any(char.IsLower))
+            {
+                errorMessage = "Пароль должен содержать хотя бы одну строчную букву.";
+                return;
+            }
+
+            if (!Input.Password.Any(char.IsDigit))
+            {
+                errorMessage = "Пароль должен содержать хотя бы одну цифру.";
+                return;
+            }
+
+            if (!Input.Password.Any(c =>
+                    !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c)))
+            {
+                errorMessage = "Пароль должен содержать хотя бы один специальный символ.";
+                return;
+            }
+
+            if (Input.Password.Any(char.IsWhiteSpace))
+            {
+                errorMessage = "Пароль не должен содержать пробелы.";
+                return;
+            }
+
+            if (Input.Password != Input.ConfirmPassword)
+            {
+                errorMessage = "Пароли не совпадают.";
+                return;
+            }
+
+            // 1. Проверяем, существует ли уже пользователь с таким Email
+            var existingUser = await DbContext.Users.AnyAsync(u => u.Email == Input.Email);
+            if (existingUser)
+            {
+                errorMessage = "Пользователь с таким e-mail уже зарегистрирован.";
+                return;
+            }
+
+            // 2. Получаем ID роли по умолчанию ("Client")
+            var clientRole = await DbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Client");
+            int roleId = clientRole?.Id ?? 1;
+
+            // 3. Хэшируем пароль через BCrypt
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Input.Password);
+
+            // 4. Генерируем 6-значный код подтверждения
+            string confirmationCode = new Random().Next(100000, 999999).ToString();
+
+            var newUser = new User
+            {
+                Email = Input.Email,
+                PasswordHash = hashedPassword,
+                RoleId = roleId,
+                IsEmailConfirmed = false,
+                EmailConfirmationCode = confirmationCode,
+                CodeExpiryTime = DateTime.Now.AddMinutes(10),
+                TimeCreated = DateTime.Now
+            };
+
+            DbContext.Users.Add(newUser);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("Создан новый пользователь в БД: {Email}", newUser.Email);
+
+            loginUrl = NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?>
+            {
+                ["ReturnUrl"] = ReturnUrl
+            });
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка при регистрации пользователя {Email}", Input.Email);
+            errorMessage = "Произошла ошибка при сохранении данных. Попробуйте снова.";
             return;
         }
 
-        Logger.LogInformation("Пользователь создал новый аккаунт с паролем.");
-
-        await SignInManager.SignInAsync(user, isPersistent: false);
-        RedirectManager.RedirectTo(ReturnUrl);
-    }
-
-    private ApplicationUser CreateUser()
-    {
-        try
+        if (!string.IsNullOrEmpty(loginUrl))
         {
-            return Activator.CreateInstance<ApplicationUser>();
+            NavigationManager.NavigateTo(loginUrl, forceLoad: true);
         }
-        catch
-        {
-            throw new InvalidOperationException($"Не удалось создать экземпляр '{nameof(ApplicationUser)}'. " +
-                $"Убедитесь, что '{nameof(ApplicationUser)}' не является абстрактным классом и имеет конструктор без параметров.");
-        }
-    }
-
-    private IUserEmailStore<ApplicationUser> GetEmailStore()
-    {
-        if (!UserManager.SupportsUserEmail)
-        {
-            throw new NotSupportedException("Стандартный UI требует хранилище пользователей с поддержкой email.");
-        }
-        return (IUserEmailStore<ApplicationUser>)UserStore;
     }
 
     private sealed class InputModel
     {
         [Required(ErrorMessage = "Введите e-mail")]
-        [EmailAddress(ErrorMessage = "Введите корректный адрес электронной почты")]
         [Display(Name = "Email")]
         public string Email { get; set; } = "";
 
         [Required(ErrorMessage = "Введите пароль")]
-        [StringLength(40, MinimumLength = 6, ErrorMessage = "{0} должен быть длиной от {2} до {1} символов.")]
         [DataType(DataType.Password)]
         [Display(Name = "Пароль")]
         public string Password { get; set; } = "";
@@ -124,7 +194,6 @@
         [Required(ErrorMessage = "Подтвердите пароль")]
         [DataType(DataType.Password)]
         [Display(Name = "Подтверждение пароля")]
-        [Compare("Password", ErrorMessage = "Пароли не совпадают.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }

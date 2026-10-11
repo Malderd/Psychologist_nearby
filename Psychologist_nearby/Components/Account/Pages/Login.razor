@@ -1,21 +1,20 @@
 @page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.EntityFrameworkCore
 @using Psychologist_nearby.Data
 
-@inject SignInManager<ApplicationUser> SignInManager
+@inject ApplicationDbContext DbContext
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
-@inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Вход в кабинет</PageTitle>
 
 <div class="login-page-container">
-
     <div class="login-card">
-
         <h1 class="login-title">Вход в кабинет</h1>
 
         <StatusMessage Message="@errorMessage" />
@@ -35,9 +34,9 @@
                 <ValidationMessage For="() => Input.Password" />
             </div>
 
-            <div class="checkbox-group">
+            <div class="checkbox-group" style="margin-bottom: 15px;">
                 <InputCheckbox @bind-Value="Input.RememberMe" id="rememberMe" class="checkbox-input" />
-                <label for="rememberMe" class="checkbox-label">Запомнить меня</label>
+                <label for="rememberMe" class="checkbox-label" style="margin-left: 8px;">Запомнить меня</label>
             </div>
 
             <button type="submit" class="btn-submit">
@@ -65,36 +64,67 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-        }
-    }
-
     public async Task LoginUser()
     {
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-        if (result.Succeeded)
+        string? targetUrl = null;
+
+        try
         {
-            Logger.LogInformation("Пользователь вошел в систему.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            // 1. Ищем пользователя в БД вместе с его ролью (.Include(u => u.Role))
+            var user = await DbContext.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Email == Input.Email);
+
+            // 2. Проверяем существование пользователя и хэш пароля через BCrypt
+            if (user == null || !BCrypt.Net.BCrypt.Verify(Input.Password, user.PasswordHash))
+            {
+                errorMessage = "Ошибка: Неверный email или пароль.";
+                return;
+            }
+
+            // 3. Формируем утверждения (Claims) для сессии, включая РОЛЬ
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.Name) // Сохраняем имя роли ("Client", "Psychologist", "Admin")
+            };
+
+            if (!string.IsNullOrEmpty(user.Name))
+            {
+                claims.Add(new Claim(ClaimTypes.Name, user.Name));
+            }
+
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = Input.RememberMe,
+                ExpiresUtc = Input.RememberMe ? DateTimeOffset.UtcNow.AddDays(14) : null
+            };
+
+            // 4. Записываем Cookie аутентификации в ответ
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                authProperties);
+
+            Logger.LogInformation("Пользователь {Email} (Роль: {Role}) успешно вошел в систему.", user.Email, user.Role.Name);
+
+            // Определяем адрес для перехода
+            targetUrl = ReturnUrl ?? "/";
         }
-        else if (result.RequiresTwoFactor)
+        catch (Exception ex)
         {
-            RedirectManager.RedirectTo(
-                "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+            Logger.LogError(ex, "Ошибка при авторизации пользователя {Email}", Input.Email);
+            errorMessage = "Произошла ошибка при попытке входа.";
+            return;
         }
-        else if (result.IsLockedOut)
+
+        // 5. Выполняем редирект ВНЕ блока try-catch с перезагрузкой
+        if (!string.IsNullOrEmpty(targetUrl))
         {
-            Logger.LogWarning("Учебная запись пользователя заблокирована.");
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            errorMessage = "Ошибка: Неверная попытка входа.";
+            NavigationManager.NavigateTo(targetUrl, forceLoad: true);
         }
     }
 

@@ -1,39 +1,44 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Psychologist_nearby.Components;
-using Psychologist_nearby.Components.Account;
 using Psychologist_nearby.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. Подключаем Razor Components и Blazor
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// 2. Настраиваем кастомное состояние авторизации для Blazor
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityUserAccessor>();
-builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddOptions();
+builder.Services.AddAuthorizationCore();
 
-builder.Services.AddAuthentication(options =>
+// 3. Настраиваем Cookie-аутентификацию (без Identity)
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+        options.Cookie.Name = "PsychologistNearby.Auth";
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+// 4. Подключаем DbContext для MySQL (Pomelo)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Не задана строка подключения к базе данных."
+    );
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
-
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
 
@@ -45,27 +50,28 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
+
+// Включаем аутентификацию и авторизацию
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Add additional endpoints required by the Identity /Account Razor components.
-app.MapAdditionalIdentityEndpoints();
-
+// Вывод регламента разработки
 var reglamentPath = Path.Combine(app.Environment.ContentRootPath, "..", "reglament.txt");
 if (File.Exists(reglamentPath))
 {
     Console.ForegroundColor = ConsoleColor.Cyan;
     Console.WriteLine("========================================");
-    Console.WriteLine("        РЕГЛАМЕНТ РАЗРАБОТКИ            ");
+    Console.WriteLine("         РЕГЛАМЕНТ РАЗРАБОТКИ            ");
     Console.WriteLine("========================================");
     Console.ResetColor();
 
@@ -81,6 +87,5 @@ else
     Console.WriteLine($"[Предупреждение]: Файл регламента не найден по пути: {reglamentPath}\n");
     Console.ResetColor();
 }
-
 
 app.Run();
