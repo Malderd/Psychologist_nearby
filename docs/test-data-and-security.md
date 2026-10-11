@@ -1,6 +1,6 @@
 # Исходное состояние и ранние ограничения безопасности — Psychologist_nearby
 
-Связано с [specification.md](specification.md) (FR-01…FR-16, NFR-01…NFR-05).
+Связано с [requirements.md](requirements.md) (FR-01…FR-16, NFR-01…NFR-05).
 
 ## 1. Как проверяющий получит нужное состояние
 
