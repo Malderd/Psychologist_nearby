@@ -1,0 +1,131 @@
+.testing-page {
+    background-color: #6d7466;
+    min-height: 100vh;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    padding-top: 80px;
+    padding-bottom: 60px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.testing-title {
+    font-size: 3.2rem;
+    margin-top: 0;
+    margin-bottom: 35px;
+    color: #FFFFFF;
+    font-weight: 700;
+    text-align: center;
+}
+
+.testing-card-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: stretch;
+    width: 92%;
+    max-width: 1200px;
+    background-color: #6d7466;
+    gap: 40px;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.testing-left-col {
+    flex: 1;
+    min-width: 340px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.testing-image-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 320px;
+}
+
+.testing-image {
+    width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+}
+
+.btn-start-test {
+    width: 100%;
+    padding: 20px 25px;
+    background-color: #665A4C;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 22px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    margin-top: 25px;
+}
+
+    .btn-start-test:hover {
+        background-color: #584c3f;
+    }
+
+.testing-right-col {
+    flex: 1.4;
+    min-width: 360px;
+    background-color: #C6BBAA;
+    border-radius: 36px;
+    padding: 60px 45px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+.testing-description {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4A4238;
+    text-align: center;
+    line-height: 1.35;
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
+.testing-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 60px;
+    color: #4A4238;
+}
+
+.testing-info-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.testing-info-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.testing-info-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+}

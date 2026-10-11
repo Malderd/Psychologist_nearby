@@ -1,75 +1,177 @@
 @page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Наталья Паэглис — Психолог</PageTitle>
 
-<div style="background-color: #6d7466; min-height: 100vh; width: 100vw; margin-left: calc(-50vw + 50%); padding: 0; box-sizing: border-box; scroll-behavior: smooth;">
+<div class="home-container">
 
-    <div style="display: flex; justify-content: flex-start; align-items: center; min-height: 100vh; padding-left: 5%; background-color: #6E7363;">
-        <div style="text-align: left; max-width: 600px; padding-right: 60px; z-index: 2;">
-            <h1 style="font-size: 4.35rem; font-weight: 700; margin-bottom: 10px; color: #FFFFFF;">Наталья Паэглис</h1>
-            <p style="color: #FFE5CA; margin-bottom: 20px; font-size: 2.35rem; font-weight: 700;">Психолог</p>
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Наталья Паэглис</h1>
+            <p class="hero-subtitle">Психолог</p>
             <p>
-                <a href="#contacts" style="display: flex; justify-content: center; align-items: center; text-align: center; text-decoration: none; padding: 10px 20px; cursor: pointer; background: #665A4C; border-radius: 20px; color: #FFFFFF; font-size: 1.6rem; font-weight: 700; border: none;">
+                <a href="#contacts" class="btn-primary">
                     запись на бесплатную диагностическую сессию
                 </a>
             </p>
         </div>
-        <div style="flex: 1; display: flex; height: 100vh;">
-            <img src="images/first.jpg" alt="Наталья Паэглис" style="width: 100%; height: 100vh; object-fit: cover; object-position: 85% center; -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50%); mask-image: linear-gradient(to right, transparent 0%, black 50%);">
+        <div class="hero-image-wrapper">
+            <img src="images/first.jpg" alt="Наталья Паэглис" class="hero-image">
         </div>
     </div>
 
-    <div id="about" style="scroll-margin-top: 80px;">
-        <div style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px 0;">
-            <img src="images/third.jpg" style="width: 180px; height: 180px; object-fit: cover; border-radius: 50%;">
+    <div id="about" class="section-scroll">
+        <div class="avatar-wrapper">
+            <img src="images/third.jpg" alt="Наталья Паэглис" class="avatar-image">
         </div>
 
-        <div style="display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 10px;">
-            <h1 style="font-size: 2.5rem; margin-bottom: 20px;color: #FFFFFF; font-weight: 700;">Обо мне</h1>
-            <div style="display: flex; justify-content: center; align-items: center; background-color: #C6BBAA; min-height: 20vh; width: 80%; max-width: 800px; border-radius: 12px;">
-                <h1 style="font-size: 2.5rem; margin: 0;font-weight: 600;">текст</h1>
+        <div class="section-container">
+            <h1 class="section-title">Обо мне</h1>
+            <div class="about-card">
+                <p class="about-text">
+                    Приветствую! Меня зовут <strong>Наталья Паэглис</strong> — я практикующий психолог и специалист по нейроинтеграции.
+                </p>
+                <p class="about-text">
+                    Моя цель — помочь вам бережно пройти через сложные периоды жизни, справиться с тревогой, выгоранием и найти внутренние опоры. В своей работе я сочетаю научно доказанные методы психотерапии и бережный, индивидуальный подход к каждому клиенту.
+                </p>
+                <div class="about-highlights">
+                    <div class="highlight-item">Более 5 лет практики</div>
+                    <div class="highlight-item">Бережное и безоценочное пространство</div>
+                    <div class="highlight-item">Научный подход и нейроинтеграция</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="requests" style="display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 50px; scroll-margin-top: 80px;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 30px;color: #FFFFFF; font-weight: 700;">Запросы с которыми я работаю</h1>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; background-color: #C6BBAA; width: 80%; max-width: 900px; padding: 30px; border-radius: 12px; text-align: center;">
-            <div style="font-size: 1.5rem;font-weight: 600; background-color: rgba(255,255,255,0.4); padding: 20px; border-radius: 8px;">отношения</div>
-            <div style="font-size: 1.5rem;font-weight: 600; background-color: rgba(255,255,255,0.4); padding: 20px; border-radius: 8px;">депрессия</div>
-            <div style="font-size: 1.5rem;font-weight: 600; background-color: rgba(255,255,255,0.4); padding: 20px; border-radius: 8px;">тревога</div>
-            <div style="font-size: 1.5rem;font-weight: 600; background-color: rgba(255,255,255,0.4); padding: 20px; border-radius: 8px;">стресс</div>
-            <div style="font-size: 1.5rem;font-weight: 600; background-color: rgba(255,255,255,0.4); padding: 20px; border-radius: 8px;">трудности в общении</div>
-            <div style="font-size: 1.5rem;font-weight: 600; background-color: rgba(255,255,255,0.4); padding: 20px; border-radius: 8px;">недостаток мотивации</div>
+    <div id="requests" class="section-container requests-section">
+        <h1 class="section-title">Запросы с которыми я работаю</h1>
+        <div class="requests-grid">
+            <div class="request-card">отношения</div>
+            <div class="request-card">депрессия</div>
+            <div class="request-card">тревога</div>
+            <div class="request-card">стресс</div>
+            <div class="request-card">трудности в общении</div>
+            <div class="request-card">недостаток мотивации</div>
         </div>
     </div>
 
-    <div id="reviews" style="display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 50px; scroll-margin-top: 80px;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 30px;color: #FFFFFF; font-weight: 700;">Отзывы</h1>
-        <div style="display: flex; justify-content: center; align-items: center; background-color: #C6BBAA; min-height: 20vh; width: 80%; max-width: 800px; border-radius: 12px;">
-            <h1 style="font-size: 2.5rem; margin: 0;font-weight: 600;">текст</h1>
+    <div id="reviews" class="section-container default-section">
+        <h1 class="section-title">Отзывы</h1>
+
+        <div class="carousel-container">
+            <button class="carousel-btn prev-btn" @onclick="PrevReview">❮</button>
+
+            <div class="review-card">
+                <p class="review-text">"@reviews[currentReviewIndex].Text"</p>
+                <div class="review-author">— @reviews[currentReviewIndex].Author</div>
+            </div>
+
+            <button class="carousel-btn next-btn" @onclick="NextReview">❯</button>
+        </div>
+
+        <div class="carousel-dots">
+            @for (int i = 0; i < reviews.Count; i++)
+            {
+                int index = i;
+                <span class="dot @(index == currentReviewIndex ? "active" : "")" @onclick="() => GoToReview(index)"></span>
+            }
         </div>
     </div>
 
-    <div id="price" style="display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 50px; scroll-margin-top: 80px;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 30px;color: #FFFFFF; font-weight: 700;">Стоимость</h1>
-        <div style="display: flex; justify-content: center; align-items: center; background-color: #C6BBAA; min-height: 20vh; width: 80%; max-width: 800px; border-radius: 12px;">
-            <h1 style="font-size: 2.5rem; margin: 0;font-weight: 600;">текст</h1>
+    <div id="price" class="section-container default-section">
+        <h1 class="section-title">Стоимость</h1>
+        <div class="price-cards-grid">
+            <div class="price-card">
+                <h3>Диагностическая сессия</h3>
+                <div class="price-value">Бесплатно</div>
+                <p class="price-desc">Знакомство, разбор вашего запроса и определение плана работы (20-30 минут).</p>
+                <a href="#contacts" class="btn-price">Записаться</a>
+            </div>
+
+            <div class="price-card featured">
+                <div class="badge">Популярно</div>
+                <h3>Индивидуальная консультация</h3>
+                <div class="price-value">2 700 ₽</div>
+                <p class="price-desc">Глубокая часовая онлайн-сессия (50-60 минут). Разбор вашей ситуации и техники самопомощи.</p>
+                <a href="#contacts" class="btn-price">Записаться</a>
+            </div>
+
+            <div class="price-card">
+                <h3>Пакет из 10 сессий</h3>
+                <div class="price-value">27 000 ₽</div>
+                <p class="price-desc">Комплексная динамическая работа.</p>
+                <a href="#contacts" class="btn-price">Записаться</a>
+            </div>
         </div>
     </div>
 
-    <div id="testing" style="display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 50px; scroll-margin-top: 80px;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 30px;color: #FFFFFF; font-weight: 700;">Тестирование</h1>
-        <div style="display: flex; justify-content: center; align-items: center; background-color: #C6BBAA; min-height: 20vh; width: 80%; max-width: 800px; border-radius: 12px;">
-            <h1 style="font-size: 2.5rem; margin: 0;font-weight: 600;">текст</h1>
-        </div>
-    </div>
+    <div id="contacts" class="section-container default-section">
+        <h1 class="section-title">Контакты</h1>
+        <div class="contacts-wrapper">
+            <div class="contacts-info">
+                <h3>Свяжитесь со мной напрямую</h3>
+                <p>Выберите удобный способ связи или заполните форму:</p>
+                <div class="contact-links">
+                    <a href="https://t.me/" target="_blank" class="contact-link tg">Telegram</a>                </div>
+            </div>
 
-    <div id="contacts" style="display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 50px; scroll-margin-top: 80px;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 30px;color: #FFFFFF; font-weight: 700;">Контакты</h1>
-        <div style="display: flex; justify-content: center; align-items: center; background-color: #C6BBAA; min-height: 20vh; width: 80%; max-width: 800px; border-radius: 12px;">
-            <h1 style="font-size: 2.5rem; margin: 0;font-weight: 600;">текст</h1>
+            <div class="contacts-form-box">
+                <form @onsubmit="HandleSubmit">
+                    <input type="text" placeholder="Ваше имя" required class="form-input" />
+                    <input type="tel" placeholder="Телефон или Telegram" required class="form-input" />
+                    <textarea placeholder="Ваш вопрос или удобное время для связи" class="form-input textarea"></textarea>
+                    <button type="submit" class="btn-submit">Отправить заявку</button>
+                </form>
+            </div>
         </div>
     </div>
 
 </div>
+
+@code {
+    private int currentReviewIndex = 0;
+
+    private class Review
+    {
+        public string Author { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private List<Review> reviews = new()
+    {
+        new Review
+        {
+            Author = "Екатерина",
+            Text = "После первой же сессии стало намного легче. Наталья помогла мне разложить всё по полочкам и справиться с сильной тревогой предновогоднего дедлайна."
+        },
+        new Review
+        {
+            Author = "Михаил",
+            Text = "Очень бережная и профессиональная работа. За 3 месяца консультаций мы смогли полностью разобрать моё эмоциональное выгорание на работе."
+        },
+        new Review
+        {
+            Author = "Анна",
+            Text = "Спасибо Наталья! Наконец-то выстроила личные границы в отношениях с близкими. На сессиях всегда тепло, безопасно и комфортно."
+        }
+    };
+
+    private void NextReview()
+    {
+        currentReviewIndex = (currentReviewIndex + 1) % reviews.Count;
+    }
+
+    private void PrevReview()
+    {
+        currentReviewIndex = (currentReviewIndex - 1 + reviews.Count) % reviews.Count;
+    }
+
+    private void GoToReview(int index)
+    {
+        currentReviewIndex = index;
+    }
+
+    private void HandleSubmit()
+    {
+        // Логика отправки формы
+    }
+}
