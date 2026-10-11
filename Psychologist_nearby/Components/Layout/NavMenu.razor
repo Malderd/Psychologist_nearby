@@ -20,9 +20,9 @@
                 <AuthorizeView>
                     <Authorized>
                         <NavLink class="nav-item user-name" href="Account/Manage">@context.User.Identity?.Name</NavLink>
-                        <form action="Account/Logout" method="post" class="logout-form">
+                        <form action="Account/Logout" method="post" class="logout-form" formname="logout-form">
                             <AntiforgeryToken />
-                            <button type="submit" class="btn-logout">Выйти</button>
+                            <NavLink class="btn-logout" href="Account/Logout">Выйти</NavLink>
                         </form>
                     </Authorized>
                     <NotAuthorized>
