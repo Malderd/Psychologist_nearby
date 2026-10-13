@@ -1,6 +1,5 @@
 @page "/testing"
 @using Psychologist_nearby.Data
-@using Psychologist_nearby.Services
 @inject TestingService TestService
 
 <PageTitle>Тестирование</PageTitle>
@@ -58,7 +57,10 @@
 
             <div class="quiz-question">
                 <span class="question-number">Вопрос @(currentQuestionIndex + 1) из @CurrentTest.Questions.Count</span>
-                <h2 class="question-text">@CurrentTest.Questions.ElementAt(currentQuestionIndex).QuestionText</h2>
+                @if (currentQuestionIndex < CurrentTest.Questions.Count)
+                {
+                    <h2 class="question-text">@CurrentTest.Questions.ToList()[currentQuestionIndex].QuestionText</h2>
+                }
             </div>
 
             <div class="quiz-options">

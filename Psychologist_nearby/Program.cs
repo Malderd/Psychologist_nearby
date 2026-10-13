@@ -36,7 +36,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
     );
 }
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Заменяем обычный AddDbContext на AddDbContextFactory:
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
