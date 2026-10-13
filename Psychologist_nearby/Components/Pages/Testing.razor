@@ -1,50 +1,178 @@
 @page "/testing"
+@using Psychologist_nearby.Data
+@using Psychologist_nearby.Services
+@inject TestingService TestService
 
 <PageTitle>Тестирование</PageTitle>
 
 <div class="testing-page">
-
-    <h1 class="testing-title">Тестирование</h1>
-
-    <div class="testing-card-container">
-
-        <!-- Левая часть: Иллюстрация и Кнопка -->
-        <div class="testing-left-col">
-            <div class="testing-image-wrapper">
-                <img src="images/hands.jpg" alt="Иллюстрация" class="testing-image" />
+    @if (tests == null)
+    {
+        <div class="loading">Загрузка тестов из базы данных...</div>
+    }
+    else if (!isStarted)
+    {
+        <!-- Экран приветствия -->
+        <h1 class="testing-title">Тестирование</h1>
+        <div class="testing-card-container">
+            <div class="testing-left-col">
+                <div class="testing-image-wrapper">
+                    <img src="images/hands.jpg" alt="Иллюстрация" class="testing-image" />
+                </div>
+                <button @onclick="StartTesting" class="btn-start-test">
+                    начать тестирование
+                </button>
             </div>
-
-            <button @onclick="StartTest" class="btn-start-test">
-                начать тестирование
-            </button>
-        </div>
-
-        <!-- Правая часть: Увеличенная карточка с текстом -->
-        <div class="testing-right-col">
-            <div>
+            <div class="testing-right-col">
                 <h2 class="testing-description">
                     Расширенная диагностика по всем уровням треугольника нейроинтеграции
                 </h2>
-            </div>
-
-            <div class="testing-info-row">
-                <div class="testing-info-block text-left">
-                    <div class="testing-info-label">на прохождение</div>
-                    <div class="testing-info-value">20 мин</div>
-                </div>
-                <div class="testing-info-block text-right">
-                    <div class="testing-info-label">вопросов</div>
-                    <div class="testing-info-value">75</div>
+                <div class="testing-info-row">
+                    <div class="testing-info-block text-left">
+                        <div class="testing-info-label">на прохождение</div>
+                        <div class="testing-info-value">10-15 мин</div>
+                    </div>
+                    <div class="testing-info-block text-right">
+                        <div class="testing-info-label">вопросов</div>
+                        <div class="testing-info-value">@TotalQuestionsCount</div>
+                    </div>
                 </div>
             </div>
         </div>
+    }
+    else if (!isCompleted)
+    {
+        <!-- Экран прохождения вопросов -->
+        <div class="quiz-card">
+            <div class="quiz-progress-bar">
+                <div class="quiz-progress-fill" style="width: @(ProgressPercentage)%"></div>
+            </div>
 
-    </div>
+            <div class="quiz-header">
+                <h3>@CurrentTest.Title</h3>
+                @if (!string.IsNullOrEmpty(CurrentTest.Description))
+                {
+                    <p class="quiz-instruction">@CurrentTest.Description</p>
+                }
+            </div>
+
+            <div class="quiz-question">
+                <span class="question-number">Вопрос @(currentQuestionIndex + 1) из @CurrentTest.Questions.Count</span>
+                <h2 class="question-text">@CurrentTest.Questions.ElementAt(currentQuestionIndex).QuestionText</h2>
+            </div>
+
+            <div class="quiz-options">
+                @foreach (var answer in CurrentTest.Answers)
+                {
+                    <button class="option-btn" @onclick="() => SelectAnswer(answer.Score)">
+                        @answer.AnswerText
+                    </button>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Экран результатов -->
+        <div class="results-card">
+            <h1 class="results-title">Ваши результаты диагностики</h1>
+
+            <div class="results-grid">
+                @foreach (var res in testScores)
+                {
+                    var interpretation = GetInterpretation(res.Key, res.Value);
+                    <div class="result-box">
+                        <h3>@res.Key.Title</h3>
+                        <div class="score-badge">Набрано баллов: <strong>@res.Value</strong></div>
+                        <p class="status-text"><strong>Состояние:</strong> @interpretation.StatusText</p>
+                        @if (!string.IsNullOrEmpty(interpretation.RecommendationText))
+                        {
+                            <p class="recommendation-text"><strong>Рекомендация:</strong> @interpretation.RecommendationText</p>
+                        }
+                    </div>
+                }
+            </div>
+
+            <button class="btn-start-test restart-btn" @onclick="Restart">Пройти заново</button>
+        </div>
+    }
 </div>
 
 @code {
-    private void StartTest()
-    {
+    private List<Test>? tests;
+    private bool isStarted = false;
+    private bool isCompleted = false;
 
+    private int currentTestIndex = 0;
+    private int currentQuestionIndex = 0;
+    private int currentScore = 0;
+
+    private Dictionary<Test, int> testScores = new();
+
+    private Test CurrentTest => tests![currentTestIndex];
+    private int TotalQuestionsCount => tests?.Sum(t => t.Questions.Count) ?? 0;
+
+    private double ProgressPercentage
+    {
+        get
+        {
+            if (tests == null || TotalQuestionsCount == 0) return 0;
+            int answered = tests.Take(currentTestIndex).Sum(t => t.Questions.Count) + currentQuestionIndex;
+            return (double)answered / TotalQuestionsCount * 100;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        tests = await TestService.GetActiveTestsAsync();
+    }
+
+    private void StartTesting()
+    {
+        isStarted = true;
+        isCompleted = false;
+        currentTestIndex = 0;
+        currentQuestionIndex = 0;
+        currentScore = 0;
+        testScores.Clear();
+    }
+
+    private async Task SelectAnswer(int score)
+    {
+        currentScore += score;
+        currentQuestionIndex++;
+
+        // Если вопросы в текущем тесте закончились
+        if (currentQuestionIndex >= CurrentTest.Questions.Count)
+        {
+            testScores[CurrentTest] = currentScore;
+
+            // Определяем интерпретацию по баллам и сохраняем в базу
+            var interp = GetInterpretation(CurrentTest, currentScore);
+            await TestService.SaveResultAsync(CurrentTest.Id, currentScore, interp.StatusText);
+
+            // Переходим к следующему тесту
+            currentTestIndex++;
+            currentQuestionIndex = 0;
+            currentScore = 0;
+
+            if (currentTestIndex >= tests!.Count)
+            {
+                isCompleted = true;
+            }
+        }
+    }
+
+    private TestInterpretation GetInterpretation(Test test, int score)
+    {
+        return test.Interpretations
+            .FirstOrDefault(i => score >= i.MinScore && score <= i.MaxScore)
+            ?? new TestInterpretation { StatusText = "Не определено", RecommendationText = "-" };
+    }
+
+    private void Restart()
+    {
+        isStarted = false;
+        isCompleted = false;
     }
 }

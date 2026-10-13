@@ -17,5 +17,7 @@ public class Test
     public DateTime TimeCreated { get; set; } = DateTime.Now;
 
     public ICollection<TestQuestion> Questions { get; set; } = new List<TestQuestion>();
+    public ICollection<TestAnswer> Answers { get; set; } = new List<TestAnswer>();
+    public ICollection<TestInterpretation> Interpretations { get; set; } = new List<TestInterpretation>();
     public ICollection<TestResult> TestResults { get; set; } = new List<TestResult>();
 }
