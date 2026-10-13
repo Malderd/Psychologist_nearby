@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<TestingService>();
 
 // 3. Настраиваем Cookie-аутентификацию (без Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -35,7 +36,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
     );
 }
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Заменяем обычный AddDbContext на AddDbContextFactory:
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
