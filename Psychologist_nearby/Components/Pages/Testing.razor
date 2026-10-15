@@ -85,7 +85,7 @@
                     var interpretation = GetInterpretation(res.Key, res.Value);
                     <div class="result-box">
                         <h3>@res.Key.Title</h3>
-                        <div class="score-badge">Набрано баллов: <strong>@res.Value</strong></div>
+                        <div class="score-badge">Набрано баллов: <strong>@res.Value</strong> из 24</div>
                         <p class="status-text"><strong>Состояние:</strong> @interpretation.StatusText</p>
                         @if (!string.IsNullOrEmpty(interpretation.RecommendationText))
                         {

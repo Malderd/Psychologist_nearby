@@ -129,3 +129,206 @@
     font-size: 1.6rem;
     font-weight: 700;
 }
+
+/* ============================================================
+   ЭКРАН ВОПРОСОВ И ЭКРАН РЕЗУЛЬТАТОВ
+   Цвета те же, что на экране приветствия:
+   фон #6d7466, карточка #C6BBAA, кнопки #665A4C, текст #4A4238
+   ============================================================ */
+
+.loading {
+    color: #FFFFFF;
+    font-size: 1.6rem;
+    font-weight: 600;
+}
+
+/* ---------- Карточка с вопросом ---------- */
+.quiz-card {
+    width: 92%;
+    max-width: 900px;
+    box-sizing: border-box;
+    padding: 50px 45px;
+    background-color: #C6BBAA;
+    border-radius: 36px;
+    color: #4A4238;
+}
+
+/* Полоса прогресса */
+.quiz-progress-bar {
+    height: 10px;
+    margin-bottom: 32px;
+    overflow: hidden;
+    border-radius: 999px;
+    background-color: rgba(74, 66, 56, 0.2);
+}
+
+.quiz-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background-color: #665A4C;
+    transition: width 0.3s ease;
+}
+
+/* Название теста и инструкция */
+.quiz-header {
+    margin-bottom: 28px;
+}
+
+    .quiz-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+.quiz-instruction {
+    margin: 10px 0 0;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    opacity: 0.85;
+}
+
+/* Номер и текст вопроса */
+.quiz-question {
+    margin-bottom: 32px;
+}
+
+.question-number {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.question-text {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+/* Варианты ответа */
+.quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.option-btn {
+    width: 100%;
+    padding: 18px 24px;
+    border: 2px solid transparent;
+    border-radius: 22px;
+    background-color: rgba(255, 255, 255, 0.35);
+    color: #4A4238;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+}
+
+    .option-btn:hover {
+        background-color: rgba(255, 255, 255, 0.55);
+        border-color: #665A4C;
+    }
+
+    .option-btn:active {
+        transform: scale(0.99);
+        background-color: #665A4C;
+        border-color: #665A4C;
+        color: #FFFFFF;
+    }
+
+    .option-btn:focus-visible {
+        outline: 3px solid #665A4C;
+        outline-offset: 3px;
+    }
+
+/* ---------- Экран результатов ---------- */
+.results-card {
+    width: 92%;
+    max-width: 1100px;
+    box-sizing: border-box;
+    padding: 50px 45px;
+    background-color: #C6BBAA;
+    border-radius: 36px;
+    color: #4A4238;
+}
+
+.results-title {
+    margin: 0 0 36px;
+    font-size: 2.4rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.result-box {
+    padding: 28px;
+    border-radius: 28px;
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+    .result-box h3 {
+        margin: 0 0 14px;
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+.score-badge {
+    display: inline-block;
+    margin-bottom: 16px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background-color: #665A4C;
+    color: #FFFFFF;
+    font-size: 1.1rem;
+}
+
+.status-text,
+.recommendation-text {
+    margin: 0 0 12px;
+    font-size: 1.15rem;
+    line-height: 1.5;
+}
+
+/* Кнопка «Пройти заново» (стили кнопки берутся из .btn-start-test) */
+.restart-btn {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    margin: 36px auto 0;
+}
+
+/* ---------- Телефон и узкие окна ---------- */
+@media (max-width: 768px) {
+    .testing-page {
+        padding-top: 48px;
+    }
+
+    .quiz-card,
+    .results-card {
+        padding: 28px 20px;
+        border-radius: 28px;
+    }
+
+    .question-text {
+        font-size: 1.5rem;
+    }
+
+    .option-btn {
+        padding: 14px 18px;
+        font-size: 1.1rem;
+    }
+
+    .results-title {
+        font-size: 1.8rem;
+    }
+}
