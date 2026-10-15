@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Psychologist_nearby.Components;
 using Psychologist_nearby.Data;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +58,17 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+builder.Services.AddAntiforgery();
+
 var app = builder.Build();
+
+app.MapPost("/Account/Logout", async (HttpContext context) =>
+{
+    await context.SignOutAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme);
+
+    return Results.Redirect("/");
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
