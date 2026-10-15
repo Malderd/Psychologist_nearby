@@ -90,7 +90,7 @@
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.Name) // Сохраняем имя роли ("Client", "Psychologist", "Admin")
+                new Claim(ClaimTypes.Role, user.Role.Name)
             };
 
             if (!string.IsNullOrEmpty(user.Name))

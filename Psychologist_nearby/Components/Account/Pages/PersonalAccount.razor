@@ -1,5 +1,12 @@
 @page "/Account/PersonalAccount"
 
+@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using Psychologist_nearby.Data
+
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
 <PageTitle>Личный кабинет</PageTitle>
@@ -8,41 +15,52 @@
     <div class="account-card">
         <h1 class="account-title">Личный кабинет</h1>
 
-        <div class="form-group">
-            <label for="email" class="form-label">Почта</label>
-            <input id="email"
-                   type="email"
-                   class="form-control"
-                   value="user@example.com"
-                   placeholder="Введите почту" />
-        </div>
+        @if (isLoading)
+        {
+            <p>Загрузка данных...</p>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="error-message">@errorMessage</p>
+        }
+        else
+        {
+            <div class="form-group">
+                <label for="email" class="form-label">Почта</label>
+                <input id="email"
+                       type="email"
+                       class="form-control"
+                       value="@GetValue(userData?.Email)"
+                       readonly />
+            </div>
 
-        <div class="form-group">
-            <label for="name" class="form-label">Имя</label>
-            <input id="name"
-                   type="text"
-                   class="form-control"
-                   value="Иван"
-                   placeholder="Введите имя" />
-        </div>
+            <div class="form-group">
+                <label for="name" class="form-label">Имя</label>
+                <input id="name"
+                       type="text"
+                       class="form-control"
+                       value="@GetValue(userData?.Name)"
+                       readonly />
+            </div>
 
-        <div class="form-group">
-            <label for="surname" class="form-label">Фамилия</label>
-            <input id="surname"
-                   type="text"
-                   class="form-control"
-                   value="Иванов"
-                   placeholder="Введите фамилию" />
-        </div>
+            <div class="form-group">
+                <label for="surname" class="form-label">Фамилия</label>
+                <input id="surname"
+                       type="text"
+                       class="form-control"
+                       value="@GetValue(userData?.Surname)"
+                       readonly />
+            </div>
 
-        <div class="form-group">
-            <label for="phone" class="form-label">Телефон</label>
-            <input id="phone"
-                   type="tel"
-                   class="form-control"
-                   value="+7 (999) 000-00-00"
-                   placeholder="Введите телефон" />
-        </div>
+            <div class="form-group">
+                <label for="phone" class="form-label">Телефон</label>
+                <input id="phone"
+                       type="tel"
+                       class="form-control"
+                       value="@GetValue(userData?.Phone)"
+                       readonly />
+            </div>
+        }
 
         <form action="/Account/Logout" method="post">
             <AntiforgeryToken />
@@ -54,6 +72,61 @@
 </div>
 
 @code {
+    private User? userData;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState =
+                await AuthenticationStateProvider
+                    .GetAuthenticationStateAsync();
+
+            var principal = authState.User;
+
+            var userIdClaim =
+                principal.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim is null ||
+                !int.TryParse(userIdClaim.Value, out var userId))
+            {
+                errorMessage =
+                    "Не удалось определить пользователя. Войдите в аккаунт повторно.";
+                return;
+            }
+
+            userData = await DbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (userData is null)
+            {
+                errorMessage = "Пользователь не найден.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"Ошибка загрузки личного кабинета: {ex}");
+
+            errorMessage =
+                "Не удалось загрузить данные. Попробуйте позже.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string GetValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "Отсутствует"
+            : value;
+    }
+
     private void Logout()
     {
         NavigationManager.NavigateTo("/Account/Logout", forceLoad: true);

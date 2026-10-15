@@ -19,7 +19,6 @@
             <div class="auth-links">
                 <AuthorizeView>
                     <Authorized>
-                        <NavLink class="nav-item user-name" href="Account/Manage">@context.User.Identity?.Name</NavLink>
                         <form action="Account/Logout" method="post">
                             <AntiforgeryToken />
                             <NavLink class="nav-item" href="Account/PersonalAccount">Личный кабинет</NavLink>
