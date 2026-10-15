@@ -36,9 +36,23 @@ if (string.IsNullOrWhiteSpace(connectionString))
     );
 }
 
-// Заменяем обычный AddDbContext на AddDbContextFactory:
+ServerVersion serverVersion;
+try
+{
+    serverVersion = ServerVersion.AutoDetect(connectionString);
+}
+catch (Exception ex)
+{
+
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine($"[ОШИБКА БД]: Не удалось подключиться к базе данных при старте: {ex.Message}");
+    Console.ResetColor();
+
+    serverVersion = new MySqlServerVersion(new Version(8, 0, 30));
+}
+
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, serverVersion));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
