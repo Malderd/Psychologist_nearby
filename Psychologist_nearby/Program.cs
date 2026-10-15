@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<TestingService>();
 
 // 3. Настраиваем Cookie-аутентификацию (без Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -50,7 +51,7 @@ catch (Exception ex)
     serverVersion = new MySqlServerVersion(new Version(8, 0, 30));
 }
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, serverVersion));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
