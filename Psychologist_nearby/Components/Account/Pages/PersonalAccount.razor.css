@@ -59,6 +59,11 @@
         box-shadow: 0 0 0 2px rgba(102, 90, 76, 0.15);
     }
 
+.logout-form {
+    margin-top: 20px;
+}
+
+.btn-save,
 .btn-logout {
     display: block;
     width: 100%;
@@ -73,6 +78,7 @@
     transition: opacity 0.2s ease;
 }
 
+    .btn-save:hover,
     .btn-logout:hover {
         opacity: 0.9;
     }

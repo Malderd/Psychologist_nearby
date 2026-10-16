@@ -2,13 +2,13 @@
 
 @using System.Security.Claims
 @using System.ComponentModel.DataAnnotations
-@using System.Text.RegularExpressions
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using Psychologist_nearby.Data
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<PersonalAccount> Logger
 
 <PageTitle>Личный кабинет</PageTitle>
 
@@ -20,31 +20,39 @@
         {
             <p>Загрузка данных...</p>
         }
-        else if (!string.IsNullOrEmpty(errorMessage) && !isSaved)
+        else if (!isUserLoaded)
         {
-            <div class="alert alert-danger">@errorMessage</div>
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
         }
         else
         {
-            @if (!string.IsNullOrEmpty(successMessage))
-            {
-                <div class="alert alert-success">@successMessage</div>
-            }
-
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="alert alert-danger">@errorMessage</div>
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
             }
 
-            <EditForm Model="Input" OnValidSubmit="SaveChanges">
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">
+                    @successMessage
+                </div>
+            }
+
+            <EditForm Model="Input" OnValidSubmit="@SaveChanges" FormName="personalAccount">
                 <DataAnnotationsValidator />
+
+                <ValidationSummary />
 
                 <div class="form-group">
                     <label for="email" class="form-label">Почта</label>
                     <input id="email"
                            type="email"
                            class="form-control"
-                           value="@GetValue(Input.Email)"
+                           value="@Input.Email"
                            readonly />
                 </div>
 
@@ -53,7 +61,9 @@
                     <InputText id="name"
                                class="form-control"
                                @bind-Value="Input.Name"
-                               placeholder="Отсутствует" />
+                               placeholder="Отсутствует" 
+                               maxlength="150" />
+
                     <ValidationMessage For="@(() => Input.Name)" />
                 </div>
 
@@ -62,7 +72,8 @@
                     <InputText id="surname"
                                class="form-control"
                                @bind-Value="Input.Surname"
-                               placeholder="Отсутствует" />
+                               placeholder="Отсутствует"
+                               maxlength="150" />
                     <ValidationMessage For="@(() => Input.Surname)" />
                 </div>
 
@@ -77,15 +88,13 @@
                     <ValidationMessage For="@(() => Input.Phone)" />
                 </div>
 
-                <button type="submit"
-                        class="btn-save"
-                        disabled="@isSaving">
+                <button type="submit" class="btn-save" disabled="@isSaving">
                     @(isSaving ? "Сохранение..." : "Сохранить")
                 </button>
             </EditForm>
         }
 
-        <form action="/Account/Logout" method="post">
+        <form action="/Account/Logout" method="post" @formname="logout" class="logout-form">
             <AntiforgeryToken />
 
             <button type="submit" class="btn-logout">
@@ -96,11 +105,13 @@
 </div>
 
 @code {
-    private UserInput Input { get; set; } = new();
+    [SupplyParameterFromForm(FormName = "personalAccount")]
+    private UserInput? Input { get; set; }
 
     private bool isLoading = true;
     private bool isSaving;
-    private bool isSaved;
+    private bool isUserLoaded;
+
     private string? errorMessage;
     private string? successMessage;
 
@@ -108,26 +119,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var submittedInput = Input;
+
         try
         {
-            var authState =
-                await AuthenticationStateProvider
+            var authState = await AuthenticationStateProvider
                     .GetAuthenticationStateAsync();
 
             var principal = authState.User;
 
-            if (principal.Identity?.IsAuthenticated != true)
+            if (principal.Identity?.IsAuthenticated != true ||
+                !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out currentUserId))
             {
                 errorMessage = "Необходимо войти в аккаунт.";
-                return;
-            }
-
-            var userIdClaim =
-                principal.FindFirst(ClaimTypes.NameIdentifier);
-            
-            if (userIdClaim is null || !int.TryParse(userIdClaim.Value, out currentUserId))
-            {
-                errorMessage = "Не удалось определить пользователя. Войдите повторно.";
                 return;
             }
 
@@ -143,14 +147,27 @@
                 return;
             }
 
-            Input.Email = user.Email;
-            Input.Name = user.Name ?? string.Empty;
-            Input.Surname = user.Surname ?? string.Empty;
-            Input.Phone = user.Phone ?? string.Empty;
+            if (submittedInput is null)
+            {
+                Input = new UserInput
+                {
+                    Email = user.Email ?? string.Empty,
+                    Name = user.Name ?? string.Empty,
+                    Surname = user.Surname ?? string.Empty,
+                    Phone = user.Phone ?? string.Empty
+                };
+            }
+            else
+            {
+                Input = submittedInput;
+                Input.Email = user.Email ?? string.Empty;
+            }
+
+            isUserLoaded = true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка загрузки личного кабинета: {ex}");
+            Logger.LogError(ex,"Ошибка загрузки личного кабинета пользователя {UserId}", currentUserId);
 
             errorMessage = "Не удалось загрузить данные. Попробуйте позже.";
         }
@@ -162,33 +179,31 @@
 
     private async Task SaveChanges()
     {
+        if (isSaving)
+            return;
+
+        if (Input is null)
+        {
+            errorMessage = "Не удалось получить данные формы.";
+            return;
+        }
+
         isSaving = true;
         errorMessage = null;
         successMessage = null;
-        isSaved = false;
 
         try
         {
-            var authState =
-                    await AuthenticationStateProvider
+            var authState = await AuthenticationStateProvider
                         .GetAuthenticationStateAsync();
 
             var principal = authState.User;
 
-            if (principal.Identity?.IsAuthenticated != true)
-            {
-                errorMessage = "Необходимо войти в аккаунт.";
-                return;
-            }
-
-            var userIdClaim =
-                    principal.FindFirst(ClaimTypes.NameIdentifier);
-
-            if (userIdClaim is null ||
-                !int.TryParse(userIdClaim.Value, out var userId) ||
+            if (principal.Identity?.IsAuthenticated != true ||
+                !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier),out var userId) ||
                 userId != currentUserId)
             {
-                errorMessage = "Не удалось подтвердить пользователя. Войдите повторно.";
+                errorMessage = "Необходимо войти в аккаунт.";
                 return;
             }
 
@@ -207,29 +222,30 @@
             user.Surname = EmptyToNull(Input.Surname);
             user.Phone = EmptyToNull(Input.Phone);
 
-            await db.SaveChangesAsync();
+            var changedEntries = await db.SaveChangesAsync();
 
             Input.Name = user.Name ?? string.Empty;
             Input.Surname = user.Surname ?? string.Empty;
             Input.Phone = user.Phone ?? string.Empty;
 
-            isSaved = true;
-            successMessage = "Данные успешно сохранены.";
+            if (changedEntries > 0)
+            {
+                successMessage = "Данные успешно сохранены.";
+            }
+            else
+            {
+                successMessage = "Изменений нет: данные уже актуальны.";
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка сохранения личного кабинета: {ex}");
+            Logger.LogError(ex, "Ошибка сохранения личного кабинета пользователя {UserId}", currentUserId);
             errorMessage = "Не удалось сохранить данные. Попробуйте позже.";
         }
         finally
         {
             isSaving = false;
         }
-    }
-
-    private static string GetValue(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Отсутствует" : value;
     }
 
     private static string? EmptyToNull(string? value)
@@ -241,16 +257,21 @@
     {
         public string Email { get; set; } = string.Empty;
 
-        [RegularExpression(@"^[А-Яа-яЁёA-Za-z]+$|^$",
-            ErrorMessage = "Имя должно содержать только русские или английские буквы.")]
+        [StringLength(150, ErrorMessage = "Имя не должно превышать 150 символов.")]
+        [RegularExpression(
+            @"^(?:[ \t]*[А-Яа-яЁёA-Za-z]+[ \t]*|[ \t]*)\z",
+            ErrorMessage = "Имя должно содержать только русские, английские буквы или быть пустой.")]
+
         public string Name { get; set; } = string.Empty;
 
-        [RegularExpression(@"^[А-Яа-яЁёA-Za-z-]+$|^$",
-            ErrorMessage = "Фамилия может содержать только буквы и дефис.")]
+        [StringLength(150, ErrorMessage = "Фамилия не должна превышать 150 символов.")]
+        [RegularExpression(
+            @"^(?:[ \t]*[А-Яа-яЁёA-Za-z]+(?:-[А-Яа-яЁёA-Za-z]+)*[ \t]*|[ \t]*)\z",
+            ErrorMessage = "Фамилия должна содержать только русские или английские буквы и дефис или быть пустой")]
         public string Surname { get; set; } = string.Empty;
 
-        [RegularExpression(@"^[0-9]{10}$|^$",
-            ErrorMessage = "Телефон должен содержать ровно 10 цифр.")]
+        [RegularExpression(@"^([0-9]{10})?$",
+            ErrorMessage = "Телефон должен содержать ровно 10 цифр или быть пустым.")]
         public string Phone { get; set; } = string.Empty;
     }
 }

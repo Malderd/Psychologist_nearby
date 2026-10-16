@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Psychologist_nearby.Components;
 using Psychologist_nearby.Data;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
