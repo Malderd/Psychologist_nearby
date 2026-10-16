@@ -68,67 +68,27 @@
         string? loginUrl = null;
 
         try
-        {
-            string email = Input.Email.Trim().ToLowerInvariant();
-
-            if (string.IsNullOrWhiteSpace(email) ||
-            !new EmailAddressAttribute().IsValid(email))
+        {            
+            if (!AuthValidator.TryNormalizeEmail(Input.Email, out string email, out var emailError))
             {
-                errorMessage = "Введите корректный адрес электронной почты.";
+                errorMessage = emailError;
                 return;
             }
 
-            if (email.Length > 100)
+            if (!AuthValidator.IsPasswordValid(Input.Password, out var passwordError))
             {
-                errorMessage = "Почта не должна содержать больше 100 символов.";
+                errorMessage = passwordError;
                 return;
             }
 
-            if (Input.Password.Length < 8 || Input.Password.Length > 40)
-            {
-                errorMessage = "Пароль должен содержать от 8 до 40 символов.";
-                return;
-            }
-
-            if (!Input.Password.Any(char.IsUpper))
-            {
-                errorMessage = "Пароль должен содержать хотя бы одну заглавную букву.";
-                return;
-            }
-
-            if (!Input.Password.Any(char.IsLower))
-            {
-                errorMessage = "Пароль должен содержать хотя бы одну строчную букву.";
-                return;
-            }
-
-            if (!Input.Password.Any(char.IsDigit))
-            {
-                errorMessage = "Пароль должен содержать хотя бы одну цифру.";
-                return;
-            }
-
-            if (!Input.Password.Any(c =>
-                    !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c)))
-            {
-                errorMessage = "Пароль должен содержать хотя бы один специальный символ.";
-                return;
-            }
-
-            if (Input.Password.Any(char.IsWhiteSpace))
-            {
-                errorMessage = "Пароль не должен содержать пробелы.";
-                return;
-            }
-
-            if (Input.Password != Input.ConfirmPassword)
+            if (!AuthValidator.PasswordsMatch(Input.Password, Input.ConfirmPassword))
             {
                 errorMessage = "Пароли не совпадают.";
                 return;
             }
 
             // 1. Проверяем, существует ли уже пользователь с таким Email
-            var existingUser = await DbContext.Users.AnyAsync(u => u.Email == Input.Email);
+            var existingUser = await DbContext.Users.AnyAsync(u => u.Email == email);
             if (existingUser)
             {
                 errorMessage = "Пользователь с таким e-mail уже зарегистрирован.";
@@ -143,11 +103,11 @@
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Input.Password);
 
             // 4. Генерируем 6-значный код подтверждения
-            string confirmationCode = new Random().Next(100000, 999999).ToString();
+            string confirmationCode = AuthValidator.GenerateConfirmationCode();
 
             var newUser = new User
             {
-                Email = Input.Email,
+                Email = email,
                 PasswordHash = hashedPassword,
                 RoleId = roleId,
                 IsEmailConfirmed = false,
