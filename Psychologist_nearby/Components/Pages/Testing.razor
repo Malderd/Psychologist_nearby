@@ -82,7 +82,7 @@
             <div class="results-grid">
                 @foreach (var res in testScores)
                 {
-                    var interpretation = GetInterpretation(res.Key, res.Value);
+                    var interpretation = TestScoreInterpreter.Interpret(res.Key, res.Value);
                     <div class="result-box">
                         <h3>@res.Key.Title</h3>
                         <div class="score-badge">Набрано баллов: <strong>@res.Value</strong> из 24</div>
@@ -118,9 +118,9 @@
     {
         get
         {
-            if (tests == null || TotalQuestionsCount == 0) return 0;
+            if (tests == null) return 0;
             int answered = tests.Take(currentTestIndex).Sum(t => t.Questions.Count) + currentQuestionIndex;
-            return (double)answered / TotalQuestionsCount * 100;
+            return TestScoreInterpreter.CalculateProgress(answered, TotalQuestionsCount);
         }
     }
 
@@ -144,16 +144,13 @@
         currentScore += score;
         currentQuestionIndex++;
 
-        // Если вопросы в текущем тесте закончились
-        if (currentQuestionIndex >= CurrentTest.Questions.Count)
+        if (TestScoreInterpreter.IsTestFinished(currentQuestionIndex, CurrentTest.Questions.Count))
         {
             testScores[CurrentTest] = currentScore;
 
-            // Определяем интерпретацию по баллам и сохраняем в базу
-            var interp = GetInterpretation(CurrentTest, currentScore);
+            var interp = TestScoreInterpreter.Interpret(CurrentTest, currentScore);
             await TestService.SaveResultAsync(CurrentTest.Id, currentScore, interp.StatusText);
 
-            // Переходим к следующему тесту
             currentTestIndex++;
             currentQuestionIndex = 0;
             currentScore = 0;
@@ -163,13 +160,6 @@
                 isCompleted = true;
             }
         }
-    }
-
-    private TestInterpretation GetInterpretation(Test test, int score)
-    {
-        return test.Interpretations
-            .FirstOrDefault(i => score >= i.MinScore && score <= i.MaxScore)
-            ?? new TestInterpretation { StatusText = "Не определено", RecommendationText = "-" };
     }
 
     private void Restart()
