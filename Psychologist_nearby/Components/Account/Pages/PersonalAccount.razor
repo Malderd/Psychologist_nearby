@@ -1,13 +1,14 @@
 @page "/Account/PersonalAccount"
 
 @using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using Psychologist_nearby.Data
 
-@inject ApplicationDbContext DbContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager NavigationManager
 
 <PageTitle>Личный кабинет</PageTitle>
 
@@ -19,51 +20,74 @@
         {
             <p>Загрузка данных...</p>
         }
-        else if (!string.IsNullOrEmpty(errorMessage))
+        else if (!string.IsNullOrEmpty(errorMessage) && !isSaved)
         {
-            <p class="error-message">@errorMessage</p>
+            <div class="alert alert-danger">@errorMessage</div>
         }
         else
         {
-            <div class="form-group">
-                <label for="email" class="form-label">Почта</label>
-                <input id="email"
-                       type="email"
-                       class="form-control"
-                       value="@GetValue(userData?.Email)"
-                       readonly />
-            </div>
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">@successMessage</div>
+            }
 
-            <div class="form-group">
-                <label for="name" class="form-label">Имя</label>
-                <input id="name"
-                       type="text"
-                       class="form-control"
-                       value="@GetValue(userData?.Name)"
-                       readonly />
-            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
 
-            <div class="form-group">
-                <label for="surname" class="form-label">Фамилия</label>
-                <input id="surname"
-                       type="text"
-                       class="form-control"
-                       value="@GetValue(userData?.Surname)"
-                       readonly />
-            </div>
+            <EditForm Model="Input" OnValidSubmit="SaveChanges">
+                <DataAnnotationsValidator />
 
-            <div class="form-group">
-                <label for="phone" class="form-label">Телефон</label>
-                <input id="phone"
-                       type="tel"
-                       class="form-control"
-                       value="@GetValue(userData?.Phone)"
-                       readonly />
-            </div>
+                <div class="form-group">
+                    <label for="email" class="form-label">Почта</label>
+                    <input id="email"
+                           type="email"
+                           class="form-control"
+                           value="@GetValue(Input.Email)"
+                           readonly />
+                </div>
+
+                <div class="form-group">
+                    <label for="name" class="form-label">Имя</label>
+                    <InputText id="name"
+                               class="form-control"
+                               @bind-Value="Input.Name"
+                               placeholder="Отсутствует" />
+                    <ValidationMessage For="@(() => Input.Name)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="surname" class="form-label">Фамилия</label>
+                    <InputText id="surname"
+                               class="form-control"
+                               @bind-Value="Input.Surname"
+                               placeholder="Отсутствует" />
+                    <ValidationMessage For="@(() => Input.Surname)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" class="form-label">Телефон</label>
+                    <InputText id="phone"
+                               class="form-control"
+                               @bind-Value="Input.Phone"
+                               placeholder="Отсутствует"
+                               inputmode="numeric"
+                               maxlength="10" />
+                    <ValidationMessage For="@(() => Input.Phone)" />
+                </div>
+
+                <button type="submit"
+                        class="btn-save"
+                        disabled="@isSaving">
+                    @(isSaving ? "Сохранение..." : "Сохранить")
+                </button>
+            </EditForm>
         }
 
         <form action="/Account/Logout" method="post">
             <AntiforgeryToken />
+
             <button type="submit" class="btn-logout">
                 Выйти
             </button>
@@ -72,9 +96,15 @@
 </div>
 
 @code {
-    private User? userData;
+    private UserInput Input { get; set; } = new();
+
     private bool isLoading = true;
+    private bool isSaving;
+    private bool isSaved;
     private string? errorMessage;
+    private string? successMessage;
+
+    private int currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,33 +116,43 @@
 
             var principal = authState.User;
 
-            var userIdClaim =
-                principal.FindFirst(ClaimTypes.NameIdentifier);
-
-            if (userIdClaim is null ||
-                !int.TryParse(userIdClaim.Value, out var userId))
+            if (principal.Identity?.IsAuthenticated != true)
             {
-                errorMessage =
-                    "Не удалось определить пользователя. Войдите в аккаунт повторно.";
+                errorMessage = "Необходимо войти в аккаунт.";
                 return;
             }
 
-            userData = await DbContext.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == userId);
+            var userIdClaim =
+                principal.FindFirst(ClaimTypes.NameIdentifier);
+            
+            if (userIdClaim is null || !int.TryParse(userIdClaim.Value, out currentUserId))
+            {
+                errorMessage = "Не удалось определить пользователя. Войдите повторно.";
+                return;
+            }
 
-            if (userData is null)
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var user = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            if (user is null)
             {
                 errorMessage = "Пользователь не найден.";
+                return;
             }
+
+            Input.Email = user.Email;
+            Input.Name = user.Name ?? string.Empty;
+            Input.Surname = user.Surname ?? string.Empty;
+            Input.Phone = user.Phone ?? string.Empty;
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
-                $"Ошибка загрузки личного кабинета: {ex}");
+            Console.WriteLine($"Ошибка загрузки личного кабинета: {ex}");
 
-            errorMessage =
-                "Не удалось загрузить данные. Попробуйте позже.";
+            errorMessage = "Не удалось загрузить данные. Попробуйте позже.";
         }
         finally
         {
@@ -120,15 +160,97 @@
         }
     }
 
-    private static string GetValue(string? value)
+    private async Task SaveChanges()
     {
-        return string.IsNullOrWhiteSpace(value)
-            ? "Отсутствует"
-            : value;
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+        isSaved = false;
+
+        try
+        {
+            var authState =
+                    await AuthenticationStateProvider
+                        .GetAuthenticationStateAsync();
+
+            var principal = authState.User;
+
+            if (principal.Identity?.IsAuthenticated != true)
+            {
+                errorMessage = "Необходимо войти в аккаунт.";
+                return;
+            }
+
+            var userIdClaim =
+                    principal.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim is null ||
+                !int.TryParse(userIdClaim.Value, out var userId) ||
+                userId != currentUserId)
+            {
+                errorMessage = "Не удалось подтвердить пользователя. Войдите повторно.";
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var user = await db.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user is null)
+            {
+                errorMessage = "Пользователь не найден.";
+                return;
+            }
+
+            user.Name = EmptyToNull(Input.Name);
+            user.Surname = EmptyToNull(Input.Surname);
+            user.Phone = EmptyToNull(Input.Phone);
+
+            await db.SaveChangesAsync();
+
+            Input.Name = user.Name ?? string.Empty;
+            Input.Surname = user.Surname ?? string.Empty;
+            Input.Phone = user.Phone ?? string.Empty;
+
+            isSaved = true;
+            successMessage = "Данные успешно сохранены.";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка сохранения личного кабинета: {ex}");
+            errorMessage = "Не удалось сохранить данные. Попробуйте позже.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
-    private void Logout()
+    private static string GetValue(string? value)
     {
-        NavigationManager.NavigateTo("/Account/Logout", forceLoad: true);
+        return string.IsNullOrWhiteSpace(value) ? "Отсутствует" : value;
+    }
+
+    private static string? EmptyToNull(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private sealed class UserInput
+    {
+        public string Email { get; set; } = string.Empty;
+
+        [RegularExpression(@"^[А-Яа-яЁёA-Za-z]+$|^$",
+            ErrorMessage = "Имя должно содержать только русские или английские буквы.")]
+        public string Name { get; set; } = string.Empty;
+
+        [RegularExpression(@"^[А-Яа-яЁёA-Za-z-]+$|^$",
+            ErrorMessage = "Фамилия может содержать только буквы и дефис.")]
+        public string Surname { get; set; } = string.Empty;
+
+        [RegularExpression(@"^[0-9]{10}$|^$",
+            ErrorMessage = "Телефон должен содержать ровно 10 цифр.")]
+        public string Phone { get; set; } = string.Empty;
     }
 }
