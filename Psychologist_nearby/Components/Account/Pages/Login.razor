@@ -73,10 +73,16 @@
 
         try
         {
+            if (!AuthValidator.TryNormalizeEmail(Input.Email, out var email, out var emailError))
+            {
+                errorMessage = emailError;
+                return;
+            }
+
             // 1. Ищем пользователя в БД вместе с его ролью (.Include(u => u.Role))
             var user = await DbContext.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Email == Input.Email);
+                .FirstOrDefaultAsync(u => u.Email == email);
 
             // 2. Проверяем существование пользователя и хэш пароля через BCrypt
             if (user == null || !BCrypt.Net.BCrypt.Verify(Input.Password, user.PasswordHash))

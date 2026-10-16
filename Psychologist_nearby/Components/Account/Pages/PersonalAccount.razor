@@ -188,6 +188,24 @@
             return;
         }
 
+        if (!AuthValidator.IsNameValid(Input.Name))
+        {
+            errorMessage = "Имя должно содержать только русские, английские буквы или быть пустым (до 150 символов).";
+            return;
+        }
+
+        if (!AuthValidator.IsSurnameValid(Input.Surname))
+        {
+            errorMessage = "Фамилия должна содержать только русские, английские буквы и дефис или быть пустой (до 150 символов).";
+            return;
+        }
+
+        if (!AuthValidator.IsPhoneValid(Input.Phone))
+        {
+            errorMessage = "Телефон должен содержать ровно 10 цифр или быть пустым.";
+            return;
+        }
+
         isSaving = true;
         errorMessage = null;
         successMessage = null;
@@ -218,9 +236,9 @@
                 return;
             }
 
-            user.Name = EmptyToNull(Input.Name);
-            user.Surname = EmptyToNull(Input.Surname);
-            user.Phone = EmptyToNull(Input.Phone);
+            user.Name = AuthValidator.EmptyToNull(Input.Name);
+            user.Surname = AuthValidator.EmptyToNull(Input.Surname);
+            user.Phone = AuthValidator.EmptyToNull(Input.Phone);
 
             var changedEntries = await db.SaveChangesAsync();
 
@@ -248,30 +266,11 @@
         }
     }
 
-    private static string? EmptyToNull(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
     private sealed class UserInput
     {
         public string Email { get; set; } = string.Empty;
-
-        [StringLength(150, ErrorMessage = "Имя не должно превышать 150 символов.")]
-        [RegularExpression(
-            @"^(?:[ \t]*[А-Яа-яЁёA-Za-z]+[ \t]*|[ \t]*)\z",
-            ErrorMessage = "Имя должно содержать только русские, английские буквы или быть пустой.")]
-
         public string Name { get; set; } = string.Empty;
-
-        [StringLength(150, ErrorMessage = "Фамилия не должна превышать 150 символов.")]
-        [RegularExpression(
-            @"^(?:[ \t]*[А-Яа-яЁёA-Za-z]+(?:-[А-Яа-яЁёA-Za-z]+)*[ \t]*|[ \t]*)\z",
-            ErrorMessage = "Фамилия должна содержать только русские или английские буквы и дефис или быть пустой")]
         public string Surname { get; set; } = string.Empty;
-
-        [RegularExpression(@"^([0-9]{10})?$",
-            ErrorMessage = "Телефон должен содержать ровно 10 цифр или быть пустым.")]
         public string Phone { get; set; } = string.Empty;
     }
 }
