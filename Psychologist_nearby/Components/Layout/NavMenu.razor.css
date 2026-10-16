@@ -78,36 +78,11 @@
         font-weight: 600;
     }
 
-/* Имя пользователя */
-.user-name,
-::deep a.user-name {
-    color: #f1f5f9;
-    font-weight: 600;
-}
-
 /* Форма и кнопка Выхода */
 .logout-form {
     display: inline;
     margin: 0;
 }
-
-.btn-logout {
-    background: transparent;
-    border: 1px solid #475569;
-    color: #cbd5e1;
-    padding: 0.4rem 0.85rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-    .btn-logout:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-        border-color: #3A332B;
-    }
 
 /* Кнопка Войти */
 .btn-login,

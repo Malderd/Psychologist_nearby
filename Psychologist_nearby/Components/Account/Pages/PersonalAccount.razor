@@ -1,6 +1,277 @@
-﻿namespace Psychologist_nearby.Components.Account.Pages
-{
-    public class PersonalAccount
+@page "/Account/PersonalAccount"
+
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using Psychologist_nearby.Data
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<PersonalAccount> Logger
+
+<PageTitle>Личный кабинет</PageTitle>
+
+<div class="account-page-container">
+    <div class="account-card">
+        <h1 class="account-title">Личный кабинет</h1>
+
+        @if (isLoading)
+        {
+            <p>Загрузка данных...</p>
+        }
+        else if (!isUserLoaded)
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">
+                    @successMessage
+                </div>
+            }
+
+            <EditForm Model="Input" OnValidSubmit="@SaveChanges" FormName="personalAccount">
+                <DataAnnotationsValidator />
+
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Почта</label>
+                    <input id="email"
+                           type="email"
+                           class="form-control"
+                           value="@Input.Email"
+                           readonly />
+                </div>
+
+                <div class="form-group">
+                    <label for="name" class="form-label">Имя</label>
+                    <InputText id="name"
+                               class="form-control"
+                               @bind-Value="Input.Name"
+                               placeholder="Отсутствует" 
+                               maxlength="150" />
+
+                    <ValidationMessage For="@(() => Input.Name)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="surname" class="form-label">Фамилия</label>
+                    <InputText id="surname"
+                               class="form-control"
+                               @bind-Value="Input.Surname"
+                               placeholder="Отсутствует"
+                               maxlength="150" />
+                    <ValidationMessage For="@(() => Input.Surname)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" class="form-label">Телефон</label>
+                    <InputText id="phone"
+                               class="form-control"
+                               @bind-Value="Input.Phone"
+                               placeholder="Отсутствует"
+                               inputmode="numeric"
+                               maxlength="10" />
+                    <ValidationMessage For="@(() => Input.Phone)" />
+                </div>
+
+                <button type="submit" class="btn-save" disabled="@isSaving">
+                    @(isSaving ? "Сохранение..." : "Сохранить")
+                </button>
+            </EditForm>
+        }
+
+        <form action="/Account/Logout" method="post" @formname="logout" class="logout-form">
+            <AntiforgeryToken />
+
+            <button type="submit" class="btn-logout">
+                Выйти
+            </button>
+        </form>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm(FormName = "personalAccount")]
+    private UserInput? Input { get; set; }
+
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool isUserLoaded;
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    private int currentUserId;
+
+    protected override async Task OnInitializedAsync()
     {
+        var submittedInput = Input;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider
+                    .GetAuthenticationStateAsync();
+
+            var principal = authState.User;
+
+            if (principal.Identity?.IsAuthenticated != true ||
+                !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out currentUserId))
+            {
+                errorMessage = "Необходимо войти в аккаунт.";
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var user = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            if (user is null)
+            {
+                errorMessage = "Пользователь не найден.";
+                return;
+            }
+
+            if (submittedInput is null)
+            {
+                Input = new UserInput
+                {
+                    Email = user.Email ?? string.Empty,
+                    Name = user.Name ?? string.Empty,
+                    Surname = user.Surname ?? string.Empty,
+                    Phone = user.Phone ?? string.Empty
+                };
+            }
+            else
+            {
+                Input = submittedInput;
+                Input.Email = user.Email ?? string.Empty;
+            }
+
+            isUserLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex,"Ошибка загрузки личного кабинета пользователя {UserId}", currentUserId);
+
+            errorMessage = "Не удалось загрузить данные. Попробуйте позже.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        if (isSaving)
+            return;
+
+        if (Input is null)
+        {
+            errorMessage = "Не удалось получить данные формы.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider
+                        .GetAuthenticationStateAsync();
+
+            var principal = authState.User;
+
+            if (principal.Identity?.IsAuthenticated != true ||
+                !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier),out var userId) ||
+                userId != currentUserId)
+            {
+                errorMessage = "Необходимо войти в аккаунт.";
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var user = await db.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user is null)
+            {
+                errorMessage = "Пользователь не найден.";
+                return;
+            }
+
+            user.Name = EmptyToNull(Input.Name);
+            user.Surname = EmptyToNull(Input.Surname);
+            user.Phone = EmptyToNull(Input.Phone);
+
+            var changedEntries = await db.SaveChangesAsync();
+
+            Input.Name = user.Name ?? string.Empty;
+            Input.Surname = user.Surname ?? string.Empty;
+            Input.Phone = user.Phone ?? string.Empty;
+
+            if (changedEntries > 0)
+            {
+                successMessage = "Данные успешно сохранены.";
+            }
+            else
+            {
+                successMessage = "Изменений нет: данные уже актуальны.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка сохранения личного кабинета пользователя {UserId}", currentUserId);
+            errorMessage = "Не удалось сохранить данные. Попробуйте позже.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string? EmptyToNull(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private sealed class UserInput
+    {
+        public string Email { get; set; } = string.Empty;
+
+        [StringLength(150, ErrorMessage = "Имя не должно превышать 150 символов.")]
+        [RegularExpression(
+            @"^(?:[ \t]*[А-Яа-яЁёA-Za-z]+[ \t]*|[ \t]*)\z",
+            ErrorMessage = "Имя должно содержать только русские, английские буквы или быть пустой.")]
+
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(150, ErrorMessage = "Фамилия не должна превышать 150 символов.")]
+        [RegularExpression(
+            @"^(?:[ \t]*[А-Яа-яЁёA-Za-z]+(?:-[А-Яа-яЁёA-Za-z]+)*[ \t]*|[ \t]*)\z",
+            ErrorMessage = "Фамилия должна содержать только русские или английские буквы и дефис или быть пустой")]
+        public string Surname { get; set; } = string.Empty;
+
+        [RegularExpression(@"^([0-9]{10})?$",
+            ErrorMessage = "Телефон должен содержать ровно 10 цифр или быть пустым.")]
+        public string Phone { get; set; } = string.Empty;
     }
 }

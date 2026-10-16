@@ -1,8 +1,20 @@
-﻿@inject NavigationManager NavigationManager
+@inject NavigationManager NavigationManager
 
 @code {
     protected override void OnInitialized()
     {
-        NavigationManager.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", forceLoad: true);
+        var currentUri = NavigationManager.Uri;
+
+        var loginUri = NavigationManager.ToAbsoluteUri("/Account/Login");
+
+        if (NavigationManager.ToAbsoluteUri(currentUri).AbsolutePath
+            .Equals(loginUri.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo(
+            $"/Account/Login?returnUrl={Uri.EscapeDataString(currentUri)}",
+            forceLoad: true);
     }
 }
