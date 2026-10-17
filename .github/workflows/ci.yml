@@ -27,6 +27,16 @@ jobs:
       - name: Test
         run: dotnet test --no-build -c Release --verbosity normal --collect:"XPlat Code Coverage"
 
+      - name: Check config guard (без config должен упасть)
+        run: |
+          rm -f Psychologist_nearby/appsettings.json
+          if dotnet run --project Psychologist_nearby -c Release; then
+            echo " ОШИБКА: приложение запустилось без конфига"
+            exit 1
+          else
+            echo " Проверка пройдена: приложение упало без конфига"
+          fi
+
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()
