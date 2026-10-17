@@ -6,7 +6,10 @@ using Psychologist_nearby.Data;
 using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
-
+var assemblyVersion = typeof(Program).Assembly
+    .GetName().Version?.ToString() ?? "unknown";
+var environment = builder.Environment.EnvironmentName;
+Console.WriteLine($"[START] Psychologist_nearby version={assemblyVersion}, env={environment}");
 // 1. Подключаем Razor Components и Blazor
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -35,6 +38,10 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException(
         "Не задана строка подключения к базе данных."
     );
+}
+else {
+    Console.WriteLine($"[DB] Connection string detected, length={connectionString.Length}");
+
 }
 
 ServerVersion serverVersion;
@@ -114,5 +121,6 @@ else
     Console.WriteLine($"[Предупреждение]: Файл регламента не найден по пути: {reglamentPath}\n");
     Console.ResetColor();
 }
+Console.WriteLine("[READY] Application started, listening for requests");
 
 app.Run();
