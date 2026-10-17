@@ -53,7 +53,7 @@ public static class AuthValidator
             return false;
         }
 
-        if (password.Length < MinPasswordLength || password.Length > MaxPasswordLength)
+        if (password.Length < MinPasswordLength || password.Length >= MaxPasswordLength)
         {
             error = "Пароль должен содержать от 8 до 40 символов";
             return false;
