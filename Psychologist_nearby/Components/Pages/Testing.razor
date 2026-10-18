@@ -1,6 +1,7 @@
 @page "/testing"
 @using Psychologist_nearby.Data
 @inject TestingService TestService
+@inject IScoreInterpreter ScoreInterpreter
 
 <PageTitle>Тестирование</PageTitle>
 
@@ -82,7 +83,7 @@
             <div class="results-grid">
                 @foreach (var res in testScores)
                 {
-                    var interpretation = TestScoreInterpreter.Interpret(res.Key, res.Value);
+                    var interpretation = ScoreInterpreter.Interpret(res.Key, res.Value);
                     <div class="result-box">
                         <h3>@res.Key.Title</h3>
                         <div class="score-badge">Набрано баллов: <strong>@res.Value</strong> из 24</div>
@@ -148,7 +149,7 @@
         {
             testScores[CurrentTest] = currentScore;
 
-            var interp = TestScoreInterpreter.Interpret(CurrentTest, currentScore);
+            var interp = ScoreInterpreter.Interpret(CurrentTest, currentScore);
             await TestService.SaveResultAsync(CurrentTest.Id, currentScore, interp.StatusText);
 
             currentTestIndex++;
