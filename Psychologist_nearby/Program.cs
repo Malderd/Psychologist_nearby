@@ -19,6 +19,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<TestingService>();
+builder.Services.AddScoped<IScoreInterpreter, RangeScoreInterpreter>();
 
 // 3. Настраиваем Cookie-аутентификацию (без Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
