@@ -20,6 +20,8 @@ builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<TestingService>();
 builder.Services.AddScoped<IScoreInterpreter, RangeScoreInterpreter>();
+builder.Services.AddScoped<IAuthValidator, RegexAuthValidator>();
+// builder.Services.AddScoped<IAuthValidator, FixedAuthValidator>();
 
 // 3. Настраиваем Cookie-аутентификацию (без Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
