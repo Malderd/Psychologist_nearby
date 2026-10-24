@@ -11,6 +11,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject Psychologist_nearby.Data.IAuthValidator AuthValidator
+@inject EmailSender EmailSender
 
 <PageTitle>Вход в кабинет</PageTitle>
 
@@ -19,39 +20,61 @@
         <h1 class="login-title">Вход в кабинет</h1>
 
         @if (!string.IsNullOrEmpty(errorMessage))
-        {
+        >
             <div class="alert alert-danger">@errorMessage</div>
         }
 
-        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+        <!-- Единая форма с фиксированным FormName для избежания конфликтов SSR -->
+        <EditForm Model="Input" method="post" OnValidSubmit="HandleFormSubmit" FormName="login">
             <DataAnnotationsValidator />
 
-            <div class="form-group">
-                <label for="email" class="form-label">Email</label>
-                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <ValidationMessage For="() => Input.Email" />
-            </div>
+            @if (!isCodeStep)
+            {
+                <!-- ШАГ 1: Ввод Email и Пароля -->
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <ValidationMessage For="() => Input.Email" />
+                </div>
 
-            <div class="form-group">
-                <label for="password" class="form-label">Пароль</label>
-                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="••••••••" />
-                <ValidationMessage For="() => Input.Password" />
-            </div>
+                <div class="form-group">
+                    <label for="password" class="form-label">Пароль</label>
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="••••••••" />
+                    <ValidationMessage For="() => Input.Password" />
+                </div>
 
-            <div class="checkbox-group" style="margin-bottom: 15px;">
-                <InputCheckbox @bind-Value="Input.RememberMe" id="rememberMe" class="checkbox-input" />
-                <label for="rememberMe" class="checkbox-label" style="margin-left: 8px;">Запомнить меня</label>
-            </div>
+                <div class="checkbox-group checkbox-spacing">
+                    <InputCheckbox @bind-Value="Input.RememberMe" id="rememberMe" class="checkbox-input" />
+                    <label for="rememberMe" class="checkbox-label checkbox-label-spacing">Запомнить меня</label>
+                </div>
 
-            <button type="submit" class="btn-submit">
-                Войти
-            </button>
+                <button type="submit" class="btn-submit">
+                    Продолжить
+                </button>
 
-            <div class="register-link-container">
-                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="register-link">
-                    Зарегистрироваться
-                </a>
-            </div>
+                <div class="register-link-container">
+                    <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="register-link">
+                        Зарегистрироваться
+                    </a>
+                </div>
+            }
+            else
+            {
+                <!-- ШАГ 2: Ввод 6-значного кода -->
+                <div class="alert alert-success alert-spacing">
+                    Код подтверждения отправлен на почту <b>@Input.Email</b>. Введите его ниже.
+                </div>
+
+                <div class="form-group">
+                    <label for="code" class="form-label">Шестизначный код</label>
+                    <InputText @bind-Value="Input.Code" class="form-control" placeholder="123456" MaxLength="6" autocomplete="one-time-code" />
+                    <ValidationMessage For="() => Input.Code" />
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    Подтвердить и войти
+                </button>
+            }
         </EditForm>
     </div>
 </div>
@@ -59,14 +82,68 @@
 @code {
     private string? errorMessage;
 
+    private bool isCodeStep => Input.IsCodeStep;
+
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm]
+    [SupplyParameterFromForm(FormName = "login")]
     private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+
+    public async Task HandleFormSubmit()
+    {
+        if (!isCodeStep)
+        {
+            await ProcessLoginCredentials();
+        }
+        else
+        {
+            await VerifyCodeAndSignIn();
+        }
+    }
+
+    private async Task ProcessLoginCredentials()
+    {
+        try
+        {
+            if (!AuthValidator.TryNormalizeEmail(Input.Email, out var email, out var emailError))
+            {
+                errorMessage = emailError;
+                return;
+            }
+
+            var user = await DbContext.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(Input.Password, user.PasswordHash))
+            {
+                errorMessage = "Ошибка: Неверный email или пароль.";
+                return;
+            }
+
+            string code = new Random().Next(100000, 999999).ToString();
+
+            user.EmailConfirmationCode = code;
+            user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
+            await DbContext.SaveChangesAsync();
+
+            await EmailSender.SendEmailAsync(user.Email, "Код подтверждения входа", $"Ваш код подтверждения: {code}");
+
+            // Переключаем флаг на модель, чтобы он сохранился при следующем запросе
+            Input.IsCodeStep = true;
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка при авторизации пользователя {Email}", Input.Email);
+            errorMessage = "Произошла ошибка при попытке входа.";
+        }
+    }
+
 
     public async Task LoginUser()
     {
@@ -92,7 +169,60 @@
                 return;
             }
 
-            // 3. Формируем утверждения (Claims) для сессии, включая РОЛЬ
+            // Генерация 6-значного кода
+            string code = new Random().Next(100000, 999999).ToString();
+
+            user.EmailConfirmationCode = code;
+            user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
+            await DbContext.SaveChangesAsync();
+
+            await EmailSender.SendEmailAsync(user.Email, "Код подтверждения входа", $"Ваш код подтверждения: {code}");
+
+            isCodeStep = true;
+            errorMessage = null;
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка при авторизации пользователя {Email}", Input.Email);
+            errorMessage = "Произошла ошибка при попытке входа.";
+            return;
+        }
+
+        // 5. Выполняем редирект ВНЕ блока try-catch с перезагрузкой
+        if (!string.IsNullOrEmpty(targetUrl))
+        {
+            NavigationManager.NavigateTo(targetUrl, forceLoad: true);
+        }
+    }
+
+    private async Task VerifyCodeAndSignIn()
+    {
+        string? targetUrl = null;
+
+        try
+        {
+            var user = await DbContext.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Email == Input.Email);
+
+            if (user == null)
+            {
+                errorMessage = "Пользователь не найден.";
+                Input.IsCodeStep = false;
+                return;
+            }
+
+            if (user.EmailConfirmationCode != Input.Code || user.CodeExpiryTime < DateTime.Now)
+            {
+                errorMessage = "Неверный или просроченный код подтверждения.";
+                return;
+            }
+
+            user.EmailConfirmationCode = null;
+            user.CodeExpiryTime = null;
+            await DbContext.SaveChangesAsync();
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -113,32 +243,28 @@
                 ExpiresUtc = Input.RememberMe ? DateTimeOffset.UtcNow.AddDays(14) : null
             };
 
-            // 4. Записываем Cookie аутентификации в ответ
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity),
                 authProperties);
 
-            Logger.LogInformation("Пользователь {Email} (Роль: {Role}) успешно вошел в систему.", user.Email, user.Role.Name);
-
-            // Определяем адрес для перехода
+            Logger.LogInformation("Пользователь {Email} успешно прошел 2FA и вошел в систему.", user.Email);
             targetUrl = ReturnUrl ?? "/";
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Ошибка при авторизации пользователя {Email}", Input.Email);
-            errorMessage = "Произошла ошибка при попытке входа.";
+            Logger.LogError(ex, "Ошибка при проверке кода для {Email}", Input.Email);
+            errorMessage = "Произошла ошибка при подтверждении кода.";
             return;
         }
 
-        // 5. Выполняем редирект ВНЕ блока try-catch с перезагрузкой
         if (!string.IsNullOrEmpty(targetUrl))
         {
             NavigationManager.NavigateTo(targetUrl, forceLoad: true);
         }
     }
 
-    private sealed class InputModel
+    private sealed class LoginInputModel
     {
         [Required(ErrorMessage = "Введите e-mail")]
         [EmailAddress(ErrorMessage = "Введите корректный адрес электронной почты")]
@@ -150,5 +276,11 @@
 
         [Display(Name = "Запомнить меня")]
         public bool RememberMe { get; set; }
+
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "Код должен состоять из 6 цифр")]
+        public string Code { get; set; } = "";
+
+        // Флаг для хранения текущего шага внутри модели формы при POST-запросах
+        public bool IsCodeStep { get; set; }
     }
 }
