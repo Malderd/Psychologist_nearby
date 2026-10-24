@@ -88,7 +88,7 @@
                 return;
             }
 
-            // 1. Проверяем, существует ли уже пользователь с таким Email
+            // Проверяем, существует ли уже пользователь с таким Email
             var existingUser = await DbContext.Users.AnyAsync(u => u.Email == email);
             if (existingUser)
             {
@@ -96,24 +96,21 @@
                 return;
             }
 
-            // 2. Получаем ID роли по умолчанию ("Client")
+            // Получаем ID роли по умолчанию ("Client")
             var clientRole = await DbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Client");
             int roleId = clientRole?.Id ?? 1;
 
-            // 3. Хэшируем пароль через BCrypt
+            // Хэшируем пароль через BCrypt
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Input.Password);
-
-            // 4. Генерируем 6-значный код подтверждения
-            string confirmationCode = AuthValidator.GenerateConfirmationCode();
 
             var newUser = new User
             {
                 Email = email,
                 PasswordHash = hashedPassword,
                 RoleId = roleId,
-                IsEmailConfirmed = false,
-                EmailConfirmationCode = confirmationCode,
-                CodeExpiryTime = DateTime.Now.AddMinutes(10),
+                IsEmailConfirmed = true,
+                EmailConfirmationCode = null,
+                CodeExpiryTime = null,
                 TimeCreated = DateTime.Now
             };
 
