@@ -22,6 +22,7 @@ builder.Services.AddScoped<TestingService>();
 builder.Services.AddScoped<IScoreInterpreter, RangeScoreInterpreter>();
 builder.Services.AddScoped<IAuthValidator, RegexAuthValidator>();
 // builder.Services.AddScoped<IAuthValidator, FixedAuthValidator>();
+builder.Services.AddTransient<EmailSender>();
 
 // 3. Настраиваем Cookie-аутентификацию (без Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

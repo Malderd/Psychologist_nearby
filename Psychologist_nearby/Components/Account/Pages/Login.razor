@@ -11,6 +11,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject Psychologist_nearby.Data.IAuthValidator AuthValidator
+@inject EmailSender EmailSender
 
 <PageTitle>Вход в кабинет</PageTitle>
 
@@ -34,7 +35,7 @@
 
             <div class="form-group">
                 <label for="password" class="form-label">Пароль</label>
-                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="••••••••" />
+                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="••••••••" />
                 <ValidationMessage For="() => Input.Password" />
             </div>
 
@@ -44,7 +45,7 @@
             </div>
 
             <button type="submit" class="btn-submit">
-                Войти
+                Продолжить
             </button>
 
             <div class="register-link-container">
@@ -58,11 +59,12 @@
 
 @code {
     private string? errorMessage;
+    string? verifyUrl = null;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm]
+    [SupplyParameterFromForm(FormName = "login")]
     private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery]
@@ -70,71 +72,74 @@
 
     public async Task LoginUser()
     {
-        string? targetUrl = null;
 
         try
         {
+            errorMessage = null;
+
             if (!AuthValidator.TryNormalizeEmail(Input.Email, out var email, out var emailError))
             {
                 errorMessage = emailError;
                 return;
             }
 
-            // 1. Ищем пользователя в БД вместе с его ролью (.Include(u => u.Role))
             var user = await DbContext.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email == email);
 
-            // 2. Проверяем существование пользователя и хэш пароля через BCrypt
             if (user == null || !BCrypt.Net.BCrypt.Verify(Input.Password, user.PasswordHash))
             {
                 errorMessage = "Ошибка: Неверный email или пароль.";
                 return;
             }
 
-            // 3. Формируем утверждения (Claims) для сессии, включая РОЛЬ
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.Name)
-            };
+            // Генерация 6-значного кода
+            string code = new Random().Next(100000, 999999).ToString();
 
-            if (!string.IsNullOrEmpty(user.Name))
+            user.EmailConfirmationCode = code;
+            user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
+            await DbContext.SaveChangesAsync();
+
+            try
             {
-                claims.Add(new Claim(ClaimTypes.Name, user.Name));
+                await EmailSender.SendEmailAsync(
+                    user.Email,
+                    "Код подтверждения входа",
+                    $"Ваш код подтверждения: {code}\n" +
+                    "Код действителен в течение 5 минут.");
+            }
+            catch
+            {
+                user.EmailConfirmationCode = null;
+                user.CodeExpiryTime = null;
+                await DbContext.SaveChangesAsync();
+
+                errorMessage =
+                    "Не удалось отправить код на почту. Попробуйте позже.";
+                return;
             }
 
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-            var authProperties = new AuthenticationProperties
+            var query = new Dictionary<string, object?>
             {
-                IsPersistent = Input.RememberMe,
-                ExpiresUtc = Input.RememberMe ? DateTimeOffset.UtcNow.AddDays(14) : null
+                ["email"] = user.Email,
+                ["rememberMe"] = Input.RememberMe,
+                ["returnUrl"] = ReturnUrl
             };
 
-            // 4. Записываем Cookie аутентификации в ответ
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(claimsIdentity),
-                authProperties);
+            verifyUrl = NavigationManager.GetUriWithQueryParameters("/Account/VerifyCode",query);
 
-            Logger.LogInformation("Пользователь {Email} (Роль: {Role}) успешно вошел в систему.", user.Email, user.Role.Name);
-
-            // Определяем адрес для перехода
-            targetUrl = ReturnUrl ?? "/";
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Ошибка при авторизации пользователя {Email}", Input.Email);
-            errorMessage = "Произошла ошибка при попытке входа.";
-            return;
+            Logger.LogError(ex,"Ошибка при авторизации пользователя {Email}", Input.Email);
+
+            errorMessage =
+                "Произошла ошибка при попытке входа.";
         }
 
-        // 5. Выполняем редирект ВНЕ блока try-catch с перезагрузкой
-        if (!string.IsNullOrEmpty(targetUrl))
+        if (verifyUrl != null)
         {
-            NavigationManager.NavigateTo(targetUrl, forceLoad: true);
+            NavigationManager.NavigateTo(verifyUrl, forceLoad: true);
         }
     }
 
