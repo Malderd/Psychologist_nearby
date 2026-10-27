@@ -10,6 +10,7 @@
 @inject ApplicationDbContext DbContext
 @inject ILogger<VerifyCode> Logger
 @inject NavigationManager NavigationManager
+@inject EmailSender EmailSender
 
 <PageTitle>Подтверждение входа</PageTitle>
 
@@ -17,16 +18,16 @@
     <div class="login-card">
         <h1 class="login-title">Подтверждение входа</h1>
 
-        <p>
-            Введите шестизначный код, отправленный на вашу электронную почту.
-        </p>
-
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="alert alert-danger" role="alert">
+            <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
                 @errorMessage
             </div>
         }
+
+        <p>
+            Введите шестизначный код, отправленный на вашу электронную почту.
+        </p>
 
         @if (string.IsNullOrWhiteSpace(Email))
         {
@@ -45,11 +46,7 @@
                 Код отправлен на <strong>@Email</strong>.
             </p>
 
-            <EditForm Model="CodeInput"
-                      method="post"
-                      action="@NavigationManager.Uri"
-                      OnValidSubmit="VerifyCodeAndSignIn"
-                      FormName="verifycode">
+            <EditForm Model="CodeInput" method="post" action="@NavigationManager.Uri" OnValidSubmit="VerifyCodeAndSignIn" FormName="verifycode">
 
                 <DataAnnotationsValidator />
 
@@ -185,7 +182,7 @@
         {
             NavigationManager.NavigateTo(targetUrl, forceLoad: true);
         }
-    }
+            }
 
     private static bool IsLocalUrl(string? url)
     {
