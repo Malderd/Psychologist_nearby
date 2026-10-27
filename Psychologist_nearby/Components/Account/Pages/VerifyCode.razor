@@ -1,0 +1,210 @@
+@page "/Account/VerifyCode"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.EntityFrameworkCore
+@using Psychologist_nearby.Data
+
+@inject ApplicationDbContext DbContext
+@inject ILogger<VerifyCode> Logger
+@inject NavigationManager NavigationManager
+
+<PageTitle>Подтверждение входа</PageTitle>
+
+<div class="login-page-container">
+    <div class="login-card">
+        <h1 class="login-title">Подтверждение входа</h1>
+
+        <p>
+            Введите шестизначный код, отправленный на вашу электронную почту.
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+
+        @if (string.IsNullOrWhiteSpace(Email))
+        {
+            <div class="alert alert-danger">
+                Не удалось определить пользователя.
+                Вернитесь на страницу входа.
+            </div>
+
+            <a href="/Account/Login" class="register-link">
+                Вернуться ко входу
+            </a>
+        }
+        else
+        {
+            <p>
+                Код отправлен на <strong>@Email</strong>.
+            </p>
+
+            <EditForm Model="CodeInput"
+                      method="post"
+                      action="@NavigationManager.Uri"
+                      OnValidSubmit="VerifyCodeAndSignIn"
+                      FormName="verifycode">
+
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <label for="code" class="form-label">
+                        Шестизначный код
+                    </label>
+
+                    <InputText id="code" @bind-Value="CodeInput.Code" class="form-control"
+                               placeholder="123456" maxlength="6" autocomplete="one-time-code" inputmode="numeric" />
+
+                    <ValidationMessage For="@(() => CodeInput.Code)" />
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    Подтвердить и войти
+                </button>
+
+                <div class="register-link-container">
+                    <a href="/Account/Login" class="register-link">
+                        Вернуться ко входу
+                    </a>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+    string? targetUrl = null;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "email")]
+    private string? Email { get; set; }
+
+    [SupplyParameterFromQuery(Name = "rememberMe")]
+    private bool RememberMe { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromForm(FormName = "verifycode")]
+    private CodeInputModel CodeInput { get; set; } = new();
+
+    private async Task VerifyCodeAndSignIn()
+    {
+        try
+        {
+            errorMessage = null;
+
+            if (string.IsNullOrWhiteSpace(Email))
+            {
+                errorMessage = "Не удалось определить пользователя.";
+                return;
+            }
+
+            var user = await DbContext.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Email == Email);
+
+            if (user == null || user.Role == null)
+            {
+                errorMessage =
+                    "Пользователь не найден. Начните вход заново.";
+                return;
+            }
+
+            // Проверка аличия кода, его правильность и срок действия.
+            if (string.IsNullOrWhiteSpace(user.EmailConfirmationCode) ||
+                user.EmailConfirmationCode != CodeInput.Code ||
+                !user.CodeExpiryTime.HasValue ||
+                user.CodeExpiryTime.Value < DateTime.Now)
+            {
+                errorMessage = "Неверный или просроченный код подтверждения.";
+                return;
+            }
+
+            user.EmailConfirmationCode = null;
+            user.CodeExpiryTime = null;
+
+            await DbContext.SaveChangesAsync();
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email,user.Email),
+                new Claim( ClaimTypes.Role, user.Role.Name)
+            };
+
+            if (!string.IsNullOrWhiteSpace(user.Name))
+            {
+                claims.Add(
+                    new Claim(ClaimTypes.Name, user.Name));
+            }
+
+            var identity = new ClaimsIdentity(claims,CookieAuthenticationDefaults.AuthenticationScheme);
+
+            var principal = new ClaimsPrincipal(identity);
+
+            var properties = new AuthenticationProperties
+            {
+                IsPersistent = RememberMe,
+                ExpiresUtc = RememberMe
+                    ? DateTimeOffset.UtcNow.AddDays(14)
+                    : null
+            };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,principal,properties);
+
+            Logger.LogInformation(
+                "Пользователь {Email} успешно вошёл в систему.",
+                user.Email);
+
+            targetUrl = IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/";
+     
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Ошибка проверки кода для {Email}",
+                Email);
+
+            errorMessage =
+                "Произошла ошибка при подтверждении кода. Попробуйте позже.";
+        }
+
+        if (targetUrl != null)
+        {
+            NavigationManager.NavigateTo(targetUrl, forceLoad: true);
+        }
+    }
+
+    private static bool IsLocalUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        return url.StartsWith('/') &&
+               !url.StartsWith("//") &&
+               !url.StartsWith("/\\") &&
+               !url.Contains('\\') &&
+               !url.Contains('\r') &&
+               !url.Contains('\n');
+    }
+
+    private sealed class CodeInputModel
+    {
+        [Required(ErrorMessage = "Введите код подтверждения")]
+        [RegularExpression(@"^[0-9]{6}$",
+            ErrorMessage = "Введите ровно 6 цифр")]
+        public string Code { get; set; } = "";
+    }
+}

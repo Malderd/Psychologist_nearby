@@ -59,6 +59,7 @@
 
 @code {
     private string? errorMessage;
+    string? verifyUrl = null;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -118,7 +119,6 @@
                 return;
             }
 
-            // Переход на отдельную страницу подтверждения.
             var query = new Dictionary<string, object?>
             {
                 ["email"] = user.Email,
@@ -126,19 +126,20 @@
                 ["returnUrl"] = ReturnUrl
             };
 
-            var verifyUrl = NavigationManager
-                .GetUriWithQueryParameters(
-                    "/Account/VerifyCode", query);
-
-            NavigationManager.NavigateTo(
-                verifyUrl, forceLoad: true);
+            verifyUrl = NavigationManager.GetUriWithQueryParameters("/Account/VerifyCode",query);
 
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Ошибка при авторизации пользователя {Email}", Input.Email);
-            errorMessage = "Произошла ошибка при попытке входа.";
-            return;
+            Logger.LogError(ex,"Ошибка при авторизации пользователя {Email}", Input.Email);
+
+            errorMessage =
+                "Произошла ошибка при попытке входа.";
+        }
+
+        if (verifyUrl != null)
+        {
+            NavigationManager.NavigateTo(verifyUrl, forceLoad: true);
         }
     }
 
