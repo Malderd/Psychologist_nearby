@@ -1,5 +1,9 @@
 @page "/testing"
 @using Psychologist_nearby.Data
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject TestingService TestService
 @inject IScoreInterpreter ScoreInterpreter
 
@@ -150,7 +154,10 @@
             testScores[CurrentTest] = currentScore;
 
             var interp = ScoreInterpreter.Interpret(CurrentTest, currentScore);
-            await TestService.SaveResultAsync(CurrentTest.Id, currentScore, interp.StatusText);
+
+            int? userId = await GetCurrentUserIdAsync();
+
+            await TestService.SaveResultAsync(CurrentTest.Id, currentScore, interp.StatusText, userId);
 
             currentTestIndex++;
             currentQuestionIndex = 0;
@@ -167,5 +174,26 @@
     {
         isStarted = false;
         isCompleted = false;
+    }
+
+    private async Task<int?> GetCurrentUserIdAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated != true)
+            return null;
+
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+
+        if (userIdClaim == null ||
+            !int.TryParse(userIdClaim.Value, out int userId))
+        {
+            return null;
+        }
+
+        return userId;
     }
 }
