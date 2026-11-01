@@ -14,100 +14,198 @@
 <PageTitle>Личный кабинет</PageTitle>
 
 <div class="account-page-container">
-    <div class="account-card">
-        <h1 class="account-title">Личный кабинет</h1>
+
+    <div class="account-layout">
 
         @if (isLoading)
         {
-            <p>Загрузка данных...</p>
+            <div class="account-card">
+                <p>Загрузка данных...</p>
+            </div>
         }
         else if (!isUserLoaded)
         {
-            <div class="alert alert-danger">
-                @errorMessage
+            <div class="account-card">
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
             </div>
         }
         else
         {
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-danger">
-                    @errorMessage
-                </div>
-            }
+            <div class="statistics-card">
 
-            @if (!string.IsNullOrEmpty(successMessage))
-            {
-                <div class="alert alert-success">
-                    @successMessage
-                </div>
-            }
+                <h2 class="statistics-title">
+                    Статистика тестирования
+                </h2>
 
-            <EditForm Model="Input" OnValidSubmit="@SaveChanges" FormName="personalAccount">
-                <DataAnnotationsValidator />
+                @if (testResults.Count == 0)
+                {
+                    <div class="statistics-empty">
+                        <p>Вы пока не проходили тестирование.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="statistics-list">
 
-                <ValidationSummary />
+                        @foreach (var result in testResults)
+                        {
+                            <div class="statistics-item">
 
-                <div class="form-group">
-                    <label for="email" class="form-label">Почта</label>
-                    <input id="email"
-                           type="email"
-                           class="form-control"
-                           value="@Input.Email"
-                           readonly />
-                </div>
+                                <h3 class="statistics-test-title">
+                                    @(result.Test?.Title ?? "Тест не найден")
+                                </h3>
 
-                <div class="form-group">
-                    <label for="name" class="form-label">Имя</label>
-                    <InputText id="name"
+                                <p>
+                                    <strong>Дата прохождения:</strong>
+                                    @result.TimeCreated.ToString("dd.MM.yyyy HH:mm")
+                                </p>
+
+                                <p>
+                                    <strong>Набрано баллов:</strong>
+                                    @result.TotalScore из @GetMaxScore(result)
+                                </p>
+
+                                <p>
+                                    <strong>Результат:</strong>
+                                    @(string.IsNullOrWhiteSpace(result.Interpretation)
+                                                            ? "Не указан"
+                                                            : result.Interpretation)
+                    </p>
+
+                            </div>
+                                }
+
+                    </div>
+                }
+
+            </div>
+            <div class="account-card">
+
+                <h1 class="account-title">
+                    Личный кабинет
+                </h1>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        @successMessage
+                    </div>
+                }
+
+                <EditForm Model="Input"
+                          OnValidSubmit="@SaveChanges"
+                          FormName="personalAccount">
+
+                    <DataAnnotationsValidator />
+
+                    <ValidationSummary />
+
+                    <div class="form-group">
+
+                        <label for="email" class="form-label">
+                            Почта
+                        </label>
+
+                        <input id="email"
+                               type="email"
                                class="form-control"
-                               @bind-Value="Input.Name"
-                               placeholder="Отсутствует" 
-                               maxlength="150" />
+                               value="@Input.Email"
+                               readonly />
 
-                    <ValidationMessage For="@(() => Input.Name)" />
-                </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="surname" class="form-label">Фамилия</label>
-                    <InputText id="surname"
-                               class="form-control"
-                               @bind-Value="Input.Surname"
-                               placeholder="Отсутствует"
-                               maxlength="150" />
-                    <ValidationMessage For="@(() => Input.Surname)" />
-                </div>
+                    <div class="form-group">
 
-                <div class="form-group">
-                    <label for="phone" class="form-label">Телефон</label>
-                    <InputText id="phone"
-                               class="form-control"
-                               @bind-Value="Input.Phone"
-                               placeholder="Отсутствует"
-                               inputmode="numeric"
-                               maxlength="10" />
-                    <ValidationMessage For="@(() => Input.Phone)" />
-                </div>
+                        <label for="name" class="form-label">
+                            Имя
+                        </label>
 
-                <button type="submit" class="btn-save" disabled="@isSaving">
-                    @(isSaving ? "Сохранение..." : "Сохранить")
-                </button>
-            </EditForm>
+                        <InputText id="name"
+                                   class="form-control"
+                                   @bind-Value="Input.Name"
+                                   placeholder="Отсутствует"
+                                   maxlength="150" />
+
+                        <ValidationMessage For="@(() => Input.Name)" />
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="surname" class="form-label">
+                            Фамилия
+                        </label>
+
+                        <InputText id="surname"
+                                   class="form-control"
+                                   @bind-Value="Input.Surname"
+                                   placeholder="Отсутствует"
+                                   maxlength="150" />
+
+                        <ValidationMessage For="@(() => Input.Surname)" />
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="phone" class="form-label">
+                            Телефон
+                        </label>
+
+                        <InputText id="phone"
+                                   class="form-control"
+                                   @bind-Value="Input.Phone"
+                                   placeholder="Отсутствует"
+                                   inputmode="numeric"
+                                   maxlength="10" />
+
+                        <ValidationMessage For="@(() => Input.Phone)" />
+
+                    </div>
+
+                    <button type="submit"
+                            class="btn-save"
+                            disabled="@isSaving">
+
+                        @(isSaving ? "Сохранение..." : "Сохранить")
+
+                    </button>
+
+                </EditForm>
+
+                <form action="/Account/Logout"
+                      method="post"
+                      @formname="logout"
+                      class="logout-form">
+
+                    <AntiforgeryToken />
+
+                    <button type="submit" class="btn-logout">
+                        Выйти
+                    </button>
+
+                </form>
+
+            </div>
         }
 
-        <form action="/Account/Logout" method="post" @formname="logout" class="logout-form">
-            <AntiforgeryToken />
-
-            <button type="submit" class="btn-logout">
-                Выйти
-            </button>
-        </form>
     </div>
+
 </div>
 
 @code {
     [SupplyParameterFromForm(FormName = "personalAccount")]
     private UserInput? Input { get; set; }
+    private List<TestResult> testResults = new();
 
     private bool isLoading = true;
     private bool isSaving;
@@ -148,6 +246,16 @@
                 return;
             }
 
+            testResults = await db.TestResults
+                .AsNoTracking()
+                .Include(r => r.Test)
+                    .ThenInclude(t => t!.Answers)
+                .Include(r => r.Test)
+                    .ThenInclude(t => t!.Questions)
+                .Where(r => r.UserId == currentUserId)
+                .OrderByDescending(r => r.TimeCreated)
+                .ToListAsync();
+
             if (submittedInput is null)
             {
                 Input = new UserInput
@@ -176,6 +284,24 @@
         {
             isLoading = false;
         }
+    }
+
+    private int GetMaxScore(TestResult result)
+    {
+        if (result.Test == null ||
+            result.Test.Questions == null ||
+            result.Test.Answers == null ||
+            result.Test.Questions.Count == 0 ||
+            result.Test.Answers.Count == 0)
+        {
+            return 0;
+        }
+
+        int questionCount = result.Test.Questions.Count;
+
+        int maxAnswerScore = result.Test.Answers.Max(a => a.Score);
+
+        return questionCount * maxAnswerScore;
     }
 
     private async Task SaveChanges()
