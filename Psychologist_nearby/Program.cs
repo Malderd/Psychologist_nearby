@@ -6,6 +6,8 @@ using Psychologist_nearby.Components;
 using Psychologist_nearby.Data;
 using Psychologist_nearby.Services;
 
+
+
 var builder = WebApplication.CreateBuilder(args);
 var assemblyVersion = typeof(Program).Assembly
     .GetName().Version?.ToString() ?? "unknown";
@@ -73,6 +75,42 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddAntiforgery();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
+
+    // Проверяем, существует ли тестовый пользователь
+    bool userExists = await db.Users
+        .AnyAsync(u => u.Email == "test@test.ru");
+
+    if (!userExists)
+    {
+        // Получаем роль Client
+        var role = await db.Roles
+            .FirstOrDefaultAsync(r => r.Name == "Client");
+
+        if (role == null)
+        {
+            throw new Exception("Роль Client не найдена!");
+        }
+
+        var testUser = new User
+        {
+            Name = "Костя",
+            Email = "test@test.ru",
+
+            // Хешируем пароль через BCrypt
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("1"),
+
+            RoleId = role.Id
+        };
+
+        db.Users.Add(testUser);
+        await db.SaveChangesAsync();
+    }
+}
 
 app.MapPost("/Account/Logout", async (HttpContext context) =>
 {
