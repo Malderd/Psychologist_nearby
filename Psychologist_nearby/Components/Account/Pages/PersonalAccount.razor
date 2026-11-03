@@ -181,12 +181,16 @@
                             </div>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label class="form-label">ID Специалиста (Психолога):</label>
-                            <input type="number" @bind="targetPsychologistId" class="form-control" min="1" placeholder="Введите ID психолога" />
-                        </div>
+                        @if (psychologistName is not null)
+                        {
+                            <p class="mb-3"><strong>Специалист:</strong> @psychologistName</p>
+                        }
+                        else
+                        {
+                            <p class="mb-3 text-muted">Специалист не найден. Запись временно недоступна.</p>
+                        }
 
-                        <button type="button" class="btn-save" @onclick="BookAppointmentSlot">
+                        <button type="button" class="btn-save" @onclick="BookAppointmentSlot" disabled="@(targetPsychologistId == 0)">
                             Записаться на сеанс
                         </button>
 
@@ -296,7 +300,9 @@
     private DateTime selectedDateOnly = DateTime.Today;
     private int selectedHour = 10;
     private DateTime selectedAppointmentDate => selectedDateOnly.Date.AddHours(selectedHour);
-    private int targetPsychologistId = 1;
+    private int targetPsychologistId;
+    private const int PsychologistUserId = 1;
+    private string? psychologistName;
     private string? bookingMessage;
     private bool isBookingSuccess;
 
@@ -341,6 +347,19 @@
                 .ToListAsync();
 
             await LoadAppointments();
+
+            // Поиск единственного психолога
+            var psychologist = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == PsychologistUserId);
+
+            if (psychologist is not null)
+            {
+                targetPsychologistId = psychologist.Id;
+                psychologistName = $"{psychologist.Name} {psychologist.Surname}".Trim();
+                if (string.IsNullOrWhiteSpace(psychologistName))
+                    psychologistName = "Психолог";
+            }
 
             Input = new UserInput
             {
@@ -451,7 +470,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Ошибка создания записи пользователем {UserId}", currentUserId);
-            bookingMessage = "Не удалось создать запись. Проверьте ID специалиста.";
+            bookingMessage = "Не удалось создать запись. Попробуйте позже.";
             isBookingSuccess = false;
         }
     }
