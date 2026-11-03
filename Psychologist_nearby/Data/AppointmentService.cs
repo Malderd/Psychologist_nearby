@@ -25,6 +25,8 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
         {
             return "Запись осуществляется строго на ровный час (например, 10:00, 11:00 и т.д.).";
         }
+        if (selectedDateTime <= DateTime.Now)
+            return "Нельзя записаться на прошедшее время.";
 
         var targetDate = selectedDateTime.Date;
 
