@@ -8,7 +8,7 @@ public static class AuthValidator
     public const int MinPasswordLength = 8;
     public const int MaxPasswordLength = 40;
     public const int MaxEmailLength = 100;
-    public const int PhoneLength = 10;
+    public const int PhoneLength = 12;
     public const int MaxNameLength = 150;
     public const int ConfirmationCodeMin = 100000;
     public const int ConfirmationCodeMax = 999999;
