@@ -121,15 +121,15 @@
             <div class="review-counter">
                 @(currentReviewIndex + 1) из @reviews.Count
             </div>
+        }
 
-            @if (isAuthenticated)
-            {
-                <div class="create-review-container">
-                    <button class="btn-create-review" @onclick="OpenReviewModal">
-                        + Создать отзыв
-                    </button>
-                </div>
-            }
+        @if (isAuthenticated)
+        {
+            <div class="create-review-container">
+                <button class="btn-create-review" @onclick="OpenReviewModal">
+                    + Создать отзыв
+                </button>
+            </div>
         }
     </div> 
 
@@ -137,6 +137,7 @@
         <h1 class="section-title">Стоимость</h1>
         <div class="price-cards-grid">
             <div class="price-card">
+ 
                 <h3>Диагностическая сессия</h3>
                 <div class="price-value">Бесплатно</div>
                 <p class="price-desc">Знакомство, разбор вашего запроса и определение плана работы (20-30 минут).</p>
@@ -385,6 +386,109 @@
     {
         if (rating >= 1 && rating <= 5)
             reviewInput.Rating = rating;
+    }
+
+    // Создание отзыва
+    private async Task CreateReviewAsync()
+    {
+        if (isSubmittingReview)
+            return;
+
+        isSubmittingReview = true;
+        reviewError = string.Empty;
+
+        try
+        {
+            var authState =
+                await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                reviewError = "Для создания отзыва необходимо войти в аккаунт.";
+                return;
+            }
+
+            var userIdClaim =
+                user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId))
+            {
+                reviewError = "Не удалось определить пользователя.";
+                return;
+            }
+
+            // Проверяем корректность данных
+            if (reviewInput.Rating < 1 || reviewInput.Rating > 5)
+            {
+                reviewError = "Выберите оценку от 1 до 5.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(reviewInput.TextReview) ||
+                reviewInput.TextReview.Trim().Length < 5 ||
+                reviewInput.TextReview.Trim().Length > 1000)
+            {
+                reviewError = "Текст отзыва должен содержать от 5 до 1000 символов.";
+                return;
+            }
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+            // Проверяем, что пользователь всё ещё существует
+            bool userExists = await db.Users
+                .AnyAsync(u => u.Id == userId);
+
+            if (!userExists)
+            {
+                reviewError = "Ваш аккаунт не найден.";
+                return;
+            }
+
+            var newReview = new Review
+            {
+                UserId = userId,
+                TextReview = reviewInput.TextReview.Trim(),
+                Rating = reviewInput.Rating,
+                TimeCreated = DateTime.Now
+            };
+
+            db.Reviews.Add(newReview);
+
+            await db.SaveChangesAsync();
+
+            isReviewModalOpen = false;
+
+            // Обновляем список отзывов
+            currentReviewIndex = 0;
+            await LoadReviewsAsync();
+
+            reviewInput = new ReviewInput();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка сохранения отзыва: {ex}");
+
+            reviewError = "Не удалось сохранить отзыв. Попробуйте ещё раз.";
+        }
+        finally
+        {
+            isSubmittingReview = false;
+        }
+    }
+
+    private class ReviewInput
+    {
+        [Required(ErrorMessage = "Введите текст отзыва.")]
+        [StringLength(1000, MinimumLength = 5,
+            ErrorMessage = "Отзыв должен содержать от 5 до 1000 символов."
+        )]
+        public string TextReview { get; set; } = string.Empty;
+
+        [Range(1, 5, ErrorMessage = "Выберите оценку от 1 до 5.")]
+        public int Rating { get; set; }
     }
 
     private void HandleSubmit()
