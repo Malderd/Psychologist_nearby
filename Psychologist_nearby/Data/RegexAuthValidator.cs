@@ -54,7 +54,7 @@ public class RegexAuthValidator : IAuthValidator
     public bool IsPhoneValid(string? phone)
     {
         if (string.IsNullOrWhiteSpace(phone)) return true; // Пустой телефон разрешен
-        return Regex.IsMatch(phone.Trim(), @"^\d{10}$");
+        return Regex.IsMatch(phone.Trim(), @"^\d{11}$");
     }
 
     public bool IsNameValid(string? name)
