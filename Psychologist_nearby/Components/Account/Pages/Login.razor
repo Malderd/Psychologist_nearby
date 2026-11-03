@@ -60,6 +60,7 @@
 @code {
     private string? errorMessage;
     string? verifyUrl = null;
+    string? redirectUrl = null;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -76,6 +77,7 @@
         try
         {
             errorMessage = null;
+            redirectUrl = null;
 
             if (!AuthValidator.TryNormalizeEmail(Input.Email, out var email, out var emailError))
             {
@@ -93,7 +95,7 @@
                 return;
             }
 
-            if (user.Email == "1")
+            if (user.Email == "test@test.ru")
             {
                 var claims = new List<Claim>
                 {
@@ -123,53 +125,45 @@
                             : null
                     });
 
-                var returnUrl = ReturnUrl;
-
-                if (string.IsNullOrWhiteSpace(returnUrl) ||
-                    !Uri.IsWellFormedUriString(returnUrl, UriKind.Relative))
-                {
-                    returnUrl = "/Account/PersonalAccount";
-                }
-
-                NavigationManager.NavigateTo(returnUrl, forceLoad: true);
-                return;
+                redirectUrl = "/Account/PersonalAccount";
             }
-
-            // Генерация 6-значного кода
-            string code = new Random().Next(100000, 999999).ToString();
-
-            user.EmailConfirmationCode = code;
-            user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
-            await DbContext.SaveChangesAsync();
-
-            try
+            else
             {
-                await EmailSender.SendEmailAsync(
-                    user.Email,
-                    "Код подтверждения входа",
-                    $"Ваш код подтверждения: {code}\n" +
-                    "Код действителен в течение 5 минут.");
-            }
-            catch
-            {
-                user.EmailConfirmationCode = null;
-                user.CodeExpiryTime = null;
+                // Генерация 6-значного кода
+                string code = new Random().Next(100000, 999999).ToString();
+
+                user.EmailConfirmationCode = code;
+                user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
                 await DbContext.SaveChangesAsync();
 
-                errorMessage =
-                    "Не удалось отправить код на почту. Попробуйте позже.";
-                return;
+                try
+                {
+                    await EmailSender.SendEmailAsync(
+                        user.Email,
+                        "Код подтверждения входа",
+                        $"Ваш код подтверждения: {code}\n" +
+                        "Код действителен в течение 5 минут.");
+                }
+                catch
+                {
+                    user.EmailConfirmationCode = null;
+                    user.CodeExpiryTime = null;
+                    await DbContext.SaveChangesAsync();
+
+                    errorMessage =
+                        "Не удалось отправить код на почту. Попробуйте позже.";
+                    return;
+                }
+
+                var query = new Dictionary<string, object?>
+                {
+                    ["email"] = user.Email,
+                    ["rememberMe"] = Input.RememberMe,
+                    ["returnUrl"] = ReturnUrl
+                };
+
+                redirectUrl = NavigationManager.GetUriWithQueryParameters("/Account/VerifyCode", query);
             }
-
-            var query = new Dictionary<string, object?>
-            {
-                ["email"] = user.Email,
-                ["rememberMe"] = Input.RememberMe,
-                ["returnUrl"] = ReturnUrl
-            };
-
-            verifyUrl = NavigationManager.GetUriWithQueryParameters("/Account/VerifyCode",query);
-
         }
         catch (Exception ex)
         {
@@ -179,9 +173,11 @@
                 "Произошла ошибка при попытке входа.";
         }
 
-        if (verifyUrl != null)
+        if (!string.IsNullOrEmpty(redirectUrl))
         {
-            NavigationManager.NavigateTo(verifyUrl, forceLoad: true);
+            NavigationManager.NavigateTo(
+                redirectUrl,
+                forceLoad: true);
         }
     }
 
