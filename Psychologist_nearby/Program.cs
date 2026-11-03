@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Psychologist_nearby.Components;
 using Psychologist_nearby.Data;
-using Microsoft.AspNetCore.Authentication;
+using Psychologist_nearby.Services;
 
 
 
@@ -21,6 +22,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddOptions();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<TestingService>();
+builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<IScoreInterpreter, RangeScoreInterpreter>();
 builder.Services.AddScoped<IAuthValidator, RegexAuthValidator>();
 // builder.Services.AddScoped<IAuthValidator, FixedAuthValidator>();

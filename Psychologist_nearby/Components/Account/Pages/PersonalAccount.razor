@@ -1,210 +1,291 @@
 @page "/Account/PersonalAccount"
-
+@rendermode InteractiveServer
 @using System.Security.Claims
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using Psychologist_nearby.Data
+@using Psychologist_nearby.Services
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ILogger<PersonalAccount> Logger
 @inject Psychologist_nearby.Data.IAuthValidator AuthValidator
+@inject AppointmentService AppointmentService
 
 <PageTitle>Личный кабинет</PageTitle>
 
 <div class="account-page-container">
+    <div class="account-dashboard-layout">
 
-    <div class="account-layout">
+        <!-- ЛЕВОЕ МЕНЮ НАВИГАЦИИ ЛИЧНОГО КАБИНЕТА -->
+        <aside class="account-sidebar">
+            <h3 class="sidebar-title">Кабинет</h3>
+            <ul class="sidebar-menu">
+                <li>
+                    <button type="button" class="@(activeTab == "profile" ? "sidebar-link active" : "sidebar-link")"
+                            @onclick='() => ChangeTab("profile")'>
+                        Профиль
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="@(activeTab == "statistics" ? "sidebar-link active" : "sidebar-link")"
+                            @onclick='() => ChangeTab("statistics")'>
+                        Статистика тестов
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="@(activeTab == "schedule" ? "sidebar-link active" : "sidebar-link")"
+                            @onclick='() => ChangeTab("schedule")'>
+                        Расписание / Запись
+                    </button>
+                </li>
+            </ul>
 
-        @if (isLoading)
-        {
-            <div class="account-card">
-                <p>Загрузка данных...</p>
+            <div class="sidebar-footer mt-auto pt-4">
+                <form action="/Account/Logout" method="post" @formname="logout-sidebar" class="logout-form">
+                    <AntiforgeryToken />
+                    <button type="submit" class="btn-logout w-100">Выйти</button>
+                </form>
             </div>
-        }
-        else if (!isUserLoaded)
-        {
-            <div class="account-card">
-                <div class="alert alert-danger">
-                    @errorMessage
+        </aside>
+
+        <!-- ПРАВАЯ ЧАСТЬ: КОНТЕНТ ВКЛАДОК -->
+        <main class="account-content">
+            @if (isLoading)
+            {
+                <div class="account-card">
+                    <p>Загрузка данных...</p>
                 </div>
-            </div>
-        }
-        else
-        {
-            <div class="statistics-card">
-
-                <h2 class="statistics-title">
-                    Статистика тестирования
-                </h2>
-
-                @if (testResults.Count == 0)
+            }
+            else if (!isUserLoaded)
+            {
+                <div class="account-card">
+                    <div class="alert alert-danger">@errorMessage</div>
+                </div>
+            }
+            else
+            {
+                <!-- ВКЛАДКА 1: ПРОФИЛЬ -->
+                @if (activeTab == "profile")
                 {
-                    <div class="statistics-empty">
-                        <p>Вы пока не проходили тестирование.</p>
-                    </div>
-                }
-                else
-                {
-                    <div class="statistics-list">
+                    <section class="account-card">
+                        <h1 class="account-title">Личные данные</h1>
 
-                        @foreach (var result in testResults)
+                        @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <div class="statistics-item">
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
 
-                                <h3 class="statistics-test-title">
-                                    @(result.Test?.Title ?? "Тест не найден")
-                                </h3>
+                        @if (!string.IsNullOrEmpty(successMessage))
+                        {
+                            <div class="alert alert-success">@successMessage</div>
+                        }
 
-                                <p>
-                                    <strong>Дата прохождения:</strong>
-                                    @result.TimeCreated.ToString("dd.MM.yyyy HH:mm")
-                                </p>
+                        <EditForm Model="Input" OnValidSubmit="@SaveChanges" FormName="personalAccount">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
 
-                                <p>
-                                    <strong>Набрано баллов:</strong>
-                                    @result.TotalScore из @GetMaxScore(result)
-                                </p>
+                            <div class="form-group">
+                                <label for="email" class="form-label">Почта</label>
+                                <input id="email" type="email" class="form-control" value="@Input.Email" readonly />
+                            </div>
 
-                                <p>
-                                    <strong>Результат:</strong>
-                                    @(string.IsNullOrWhiteSpace(result.Interpretation)
-                                                            ? "Не указан"
-                                                            : result.Interpretation)
-                                </p>
+                            <div class="form-group">
+                                <label for="name" class="form-label">Имя</label>
+                                <InputText id="name" class="form-control" @bind-Value="Input.Name" placeholder="Отсутствует" maxlength="150" />
+                                <ValidationMessage For="@(() => Input.Name)" class="text-danger" />
+                            </div>
 
+                            <div class="form-group">
+                                <label for="surname" class="form-label">Фамилия</label>
+                                <InputText id="surname" class="form-control" @bind-Value="Input.Surname" placeholder="Отсутствует" maxlength="150" />
+                                <ValidationMessage For="@(() => Input.Surname)" class="text-danger" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone" class="form-label">Телефон</label>
+                                <InputText id="phone" class="form-control" @bind-Value="Input.Phone" placeholder="Отсутствует" inputmode="numeric" maxlength="10" />
+                                <ValidationMessage For="@(() => Input.Phone)" class="text-danger" />
+                            </div>
+
+                            <button type="submit" class="btn-save" disabled="@isSaving">
+                                @(isSaving ? "Сохранение..." : "Сохранить")
+                            </button>
+                        </EditForm>
+                    </section>
+                }
+
+                <!-- ВКЛАДКА 2: СТАТИСТИКА -->
+                @if (activeTab == "statistics")
+                {
+                    <section class="statistics-card">
+                        <h2 class="statistics-title">Статистика тестирования</h2>
+
+                        @if (testResults.Count == 0)
+                        {
+                            <div class="statistics-empty">
+                                <p>Вы пока не проходили тестирование.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="statistics-list">
+                                @foreach (var result in testResults)
+                                {
+                                    <article class="statistics-item">
+                                        <h3 class="statistics-test-title">@(result.Test?.Title ?? "Тест не найден")</h3>
+                                        <p><strong>Дата прохождения:</strong> @result.TimeCreated.ToString("dd.MM.yyyy HH:mm")</p>
+                                        <p><strong>Набрано баллов:</strong> @result.TotalScore из @GetMaxScore(result)</p>
+                                        <p><strong>Результат:</strong> @(string.IsNullOrWhiteSpace(result.Interpretation) ? "Не указан" : result.Interpretation)</p>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+
+                <!-- ВКЛАДКА 3: РАСПИСАНИЕ И ЗАПИСЬ -->
+                @if (activeTab == "schedule")
+                {
+                    <section class="account-card">
+                        <h2 class="account-title">Расписание и запись на прием</h2>
+
+                        @if (!string.IsNullOrEmpty(bookingMessage))
+                        {
+                            <div class="alert @(isBookingSuccess ? "alert-success" : "alert-danger")">
+                                @bookingMessage
                             </div>
                         }
 
-                    </div>
+                        <p class="text-muted">Правила записи: с 10:00 до 20:00, строго на ровный час, не более 4 записей в день.</p>
+
+                        <div class="row">
+                            <div class="form-group col-md-6 mb-3">
+                                <label class="form-label">Выберите дату сеанса:</label>
+                                <input type="date"
+                                       value="@selectedDateOnly.ToString("yyyy-MM-dd")"
+                                       @onchange="OnDateChanged"
+                                       class="form-control"
+                                       min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            </div>
+
+                            <div class="form-group col-md-6 mb-3">
+                                <label class="form-label">Выберите доступный час:</label>
+                                <select @bind="selectedHour" class="form-select">
+                                    @for (int h = 10; h < 20; h++)
+                                    {
+                                        <option value="@h">@($"{h}:00")</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        @if (psychologistName is not null)
+                        {
+                            <p class="mb-3"><strong>Специалист:</strong> @psychologistName</p>
+                        }
+                        else
+                        {
+                            <p class="mb-3 text-muted">Специалист не найден. Запись временно недоступна.</p>
+                        }
+
+                        <button type="button" class="btn-save" @onclick="BookAppointmentSlot" disabled="@(targetPsychologistId == 0)">
+                            Записаться на сеанс
+                        </button>
+
+                        <!-- ===== КАЛЕНДАРЬ ЗАПИСЕЙ ===== -->
+                        <hr class="my-4" />
+
+                        <h3 class="calendar-section-title">Мои записи</h3>
+
+                        <div class="calendar-header">
+                            <button type="button" class="calendar-nav" @onclick="PrevMonth">‹</button>
+                            <span class="calendar-month">@calendarMonth.ToString("MMMM yyyy", Ru)</span>
+                            <button type="button" class="calendar-nav" @onclick="NextMonth">›</button>
+                        </div>
+
+                        <div class="calendar-grid">
+                            @foreach (var d in new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс" })
+                            {
+                                <div class="calendar-weekday">@d</div>
+                            }
+
+                            @foreach (var day in GetCalendarCells())
+                            {
+                                if (day is null)
+                                {
+                                    <div class="calendar-cell empty"></div>
+                                }
+                                else
+                                {
+                                    var date = day.Value;
+                                    var items = AppointmentsOn(date);
+                                    var cls = "calendar-cell"
+                                    + (date == DateTime.Today ? " today" : "")
+                                    + (items.Count > 0 ? " has-appointments" : "")
+                                    + (selectedCalendarDay == date ? " selected" : "");
+
+                                    <button type="button" class="@cls" @onclick="() => SelectDay(date)">
+                                        <span class="calendar-day-number">@date.Day</span>
+                                        @foreach (var a in items)
+                                        {
+                                            <span class="calendar-chip">@a.AppointmentDate.ToString("HH:mm")</span>
+                                        }
+                                    </button>
+                                }
+                            }
+                        </div>
+
+                        @if (selectedCalendarDay is not null)
+                        {
+                            var dayItems = AppointmentsOn(selectedCalendarDay.Value);
+                            <div class="calendar-details">
+                                <h4>@selectedCalendarDay.Value.ToString("d MMMM yyyy", Ru)</h4>
+                                @if (dayItems.Count == 0)
+                                {
+                                    <p class="text-muted">В этот день записей нет.</p>
+                                }
+                                else
+                                {
+                                    @foreach (var a in dayItems)
+                                    {
+                                        <div class="appointment-row">
+                                            <span>🕒 @a.AppointmentDate.ToString("HH:mm") — @PsychologistName(a) (@StatusText(a.Status))</span>
+                                            @if (a.Status == "Confirmed" && a.AppointmentDate > DateTime.Now)
+                                            {
+                                                <button type="button" class="btn-cancel" @onclick="() => CancelAppointment(a.Id)">Отменить</button>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+
+                        @if (upcomingAppointments.Count > 0)
+                        {
+                            <div class="calendar-details">
+                                <h4>Ближайшие записи</h4>
+                                @foreach (var a in upcomingAppointments)
+                                {
+                                    <div class="appointment-row">
+                                        <span>📅 @a.AppointmentDate.ToString("dd.MM.yyyy HH:mm") — @PsychologistName(a)</span>
+                                        <button type="button" class="btn-cancel" @onclick="() => CancelAppointment(a.Id)">Отменить</button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </section>
                 }
-
-            </div>
-            <div class="account-card">
-
-                <h1 class="account-title">
-                    Личный кабинет
-                </h1>
-
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger">
-                        @errorMessage
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(successMessage))
-                {
-                    <div class="alert alert-success">
-                        @successMessage
-                    </div>
-                }
-
-                <EditForm Model="Input"
-                          OnValidSubmit="@SaveChanges"
-                          FormName="personalAccount">
-
-                    <DataAnnotationsValidator />
-
-                    <ValidationSummary />
-
-                    <div class="form-group">
-
-                        <label for="email" class="form-label">
-                            Почта
-                        </label>
-
-                        <input id="email"
-                               type="email"
-                               class="form-control"
-                               value="@Input.Email"
-                               readonly />
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label for="name" class="form-label">
-                            Имя
-                        </label>
-
-                        <InputText id="name"
-                                   class="form-control"
-                                   @bind-Value="Input.Name"
-                                   placeholder="Отсутствует"
-                                   maxlength="150" />
-
-                        <ValidationMessage For="@(() => Input.Name)" />
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label for="surname" class="form-label">
-                            Фамилия
-                        </label>
-
-                        <InputText id="surname"
-                                   class="form-control"
-                                   @bind-Value="Input.Surname"
-                                   placeholder="Отсутствует"
-                                   maxlength="150" />
-
-                        <ValidationMessage For="@(() => Input.Surname)" />
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label for="phone" class="form-label">
-                            Телефон
-                        </label>
-
-                        <InputText id="phone"
-                                   class="form-control"
-                                   @bind-Value="Input.Phone"
-                                   placeholder="Отсутствует"
-                                   inputmode="numeric"
-                                   maxlength="12" />
-
-                        <ValidationMessage For="@(() => Input.Phone)" />
-
-                    </div>
-
-                    <button type="submit"
-                            class="btn-save"
-                            disabled="@isSaving">
-
-                        @(isSaving ? "Сохранение..." : "Сохранить")
-
-                    </button>
-
-                </EditForm>
-
-                <form action="/Account/Logout"
-                      method="post"
-                      @formname="logout"
-                      class="logout-form">
-
-                    <AntiforgeryToken />
-
-                    <button type="submit" class="btn-logout">
-                        Выйти
-                    </button>
-
-                </form>
-
-            </div>
-        }
-
+            }
+        </main>
     </div>
-
 </div>
 
 @code {
-    [SupplyParameterFromForm(FormName = "personalAccount")]
-    private UserInput? Input { get; set; }
+    private string activeTab = "profile";
+
+    private UserInput Input { get; set; } = new();
     private List<TestResult> testResults = new();
 
     private bool isLoading = true;
@@ -213,20 +294,31 @@
 
     private string? errorMessage;
     private string? successMessage;
-
     private int currentUserId;
+
+    // --- Запись на приём ---
+    private DateTime selectedDateOnly = DateTime.Today;
+    private int selectedHour = 10;
+    private DateTime selectedAppointmentDate => selectedDateOnly.Date.AddHours(selectedHour);
+    private int targetPsychologistId;
+    private const int PsychologistUserId = 1;
+    private string? psychologistName;
+    private string? bookingMessage;
+    private bool isBookingSuccess;
+
+    // --- Календарь ---
+    private static readonly System.Globalization.CultureInfo Ru = new("ru-RU");
+    private List<Appointment> myAppointments = new();
+    private List<Appointment> upcomingAppointments = new();
+    private DateTime calendarMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? selectedCalendarDay;
 
     protected override async Task OnInitializedAsync()
     {
-        var submittedInput = Input;
-
         try
         {
-            var authState = await AuthenticationStateProvider
-                    .GetAuthenticationStateAsync();
-
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var principal = authState.User;
-
             if (principal.Identity?.IsAuthenticated != true ||
                 !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out currentUserId))
             {
@@ -235,11 +327,9 @@
             }
 
             await using var db = await DbFactory.CreateDbContextAsync();
-
             var user = await db.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == currentUserId);
-
             if (user is null)
             {
                 errorMessage = "Пользователь не найден.";
@@ -249,35 +339,40 @@
             testResults = await db.TestResults
                 .AsNoTracking()
                 .Include(r => r.Test)
-                    .ThenInclude(t => t!.Answers)
+                .ThenInclude(t => t!.Answers)
                 .Include(r => r.Test)
-                    .ThenInclude(t => t!.Questions)
+                .ThenInclude(t => t!.Questions)
                 .Where(r => r.UserId == currentUserId)
                 .OrderByDescending(r => r.TimeCreated)
                 .ToListAsync();
 
-            if (submittedInput is null)
+            await LoadAppointments();
+
+            // Поиск единственного психолога
+            var psychologist = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == PsychologistUserId);
+
+            if (psychologist is not null)
             {
-                Input = new UserInput
-                {
-                    Email = user.Email ?? string.Empty,
-                    Name = user.Name ?? string.Empty,
-                    Surname = user.Surname ?? string.Empty,
-                    Phone = user.Phone ?? string.Empty
-                };
-            }
-            else
-            {
-                Input = submittedInput;
-                Input.Email = user.Email ?? string.Empty;
+                targetPsychologistId = psychologist.Id;
+                psychologistName = $"{psychologist.Name} {psychologist.Surname}".Trim();
+                if (string.IsNullOrWhiteSpace(psychologistName))
+                    psychologistName = "Психолог";
             }
 
+            Input = new UserInput
+            {
+                Email = user.Email ?? string.Empty,
+                Name = user.Name ?? string.Empty,
+                Surname = user.Surname ?? string.Empty,
+                Phone = user.Phone ?? string.Empty
+            };
             isUserLoaded = true;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex,"Ошибка загрузки личного кабинета пользователя {UserId}", currentUserId);
-
+            Logger.LogError(ex, "Ошибка загрузки личного кабинета пользователя {UserId}", currentUserId);
             errorMessage = "Не удалось загрузить данные. Попробуйте позже.";
         }
         finally
@@ -286,111 +381,173 @@
         }
     }
 
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+        {
+            selectedDateOnly = date;
+        }
+    }
+
+    private void ChangeTab(string tabName)
+    {
+        activeTab = tabName;
+        errorMessage = null;
+        successMessage = null;
+        bookingMessage = null;
+    }
+
     private int GetMaxScore(TestResult result)
     {
-        if (result.Test == null ||
-            result.Test.Questions == null ||
-            result.Test.Answers == null ||
-            result.Test.Questions.Count == 0 ||
-            result.Test.Answers.Count == 0)
+        if (result.Test?.Questions == null || result.Test?.Answers == null ||
+            result.Test.Questions.Count == 0 || result.Test.Answers.Count == 0)
         {
             return 0;
         }
-
-        int questionCount = result.Test.Questions.Count;
-
-        int maxAnswerScore = result.Test.Answers.Max(a => a.Score);
-
-        return questionCount * maxAnswerScore;
+        return result.Test.Questions.Count * result.Test.Answers.Max(a => a.Score);
     }
 
     private async Task SaveChanges()
     {
-        if (isSaving)
-            return;
-
-        if (Input is null)
+        if (isSaving) return;
+        if (!AuthValidator.IsNameValid(Input.Name) || !AuthValidator.IsSurnameValid(Input.Surname) || !AuthValidator.IsPhoneValid(Input.Phone))
         {
-            errorMessage = "Не удалось получить данные формы.";
+            errorMessage = "Проверьте правильность введенных данных (имя, фамилия, телефон).";
             return;
         }
-
-        if (!AuthValidator.IsNameValid(Input.Name))
-        {
-            errorMessage = "Имя должно содержать только русские, английские буквы или быть пустым (до 150 символов).";
-            return;
-        }
-
-        if (!AuthValidator.IsSurnameValid(Input.Surname))
-        {
-            errorMessage = "Фамилия должна содержать только русские, английские буквы и дефис или быть пустой (до 150 символов).";
-            return;
-        }
-
-        if (!AuthValidator.IsPhoneValid(Input.Phone))
-        {
-            errorMessage = "Телефон должен начинаться с +7 и затем содержать 10 цифр или быть пустым.";
-            return;
-        }
-
         isSaving = true;
         errorMessage = null;
         successMessage = null;
-
         try
         {
-            var authState = await AuthenticationStateProvider
-                        .GetAuthenticationStateAsync();
-
-            var principal = authState.User;
-
-            if (principal.Identity?.IsAuthenticated != true ||
-                !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier),out var userId) ||
-                userId != currentUserId)
-            {
-                errorMessage = "Необходимо войти в аккаунт.";
-                return;
-            }
-
             await using var db = await DbFactory.CreateDbContextAsync();
-
-            var user = await db.Users
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == currentUserId);
             if (user is null)
             {
                 errorMessage = "Пользователь не найден.";
                 return;
             }
-
             user.Name = AuthValidator.EmptyToNull(Input.Name);
             user.Surname = AuthValidator.EmptyToNull(Input.Surname);
             user.Phone = AuthValidator.EmptyToNull(Input.Phone);
-
-            var changedEntries = await db.SaveChangesAsync();
-
-            Input.Name = user.Name ?? string.Empty;
-            Input.Surname = user.Surname ?? string.Empty;
-            Input.Phone = user.Phone ?? string.Empty;
-
-            if (changedEntries > 0)
-            {
-                successMessage = "Данные успешно сохранены.";
-            }
-            else
-            {
-                successMessage = "Изменений нет: данные уже актуальны.";
-            }
+            await db.SaveChangesAsync();
+            successMessage = "Данные успешно сохранены.";
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Ошибка сохранения личного кабинета пользователя {UserId}", currentUserId);
-            errorMessage = "Не удалось сохранить данные. Попробуйте позже.";
+            errorMessage = "Не удалось сохранить данные.";
         }
         finally
         {
             isSaving = false;
         }
+    }
+
+    private async Task BookAppointmentSlot()
+    {
+        bookingMessage = null;
+        isBookingSuccess = false;
+
+        try
+        {
+            string? error = await AppointmentService.CreateAppointmentAsync(currentUserId, targetPsychologistId, selectedAppointmentDate);
+            if (error != null)
+            {
+                bookingMessage = error;
+                isBookingSuccess = false;
+            }
+            else
+            {
+                bookingMessage = $"Запись успешно создана на {selectedAppointmentDate:dd.MM.yyyy HH:mm}!";
+                isBookingSuccess = true;
+
+                await LoadAppointments();
+                calendarMonth = new DateTime(selectedAppointmentDate.Year, selectedAppointmentDate.Month, 1);
+                selectedCalendarDay = selectedAppointmentDate.Date;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка создания записи пользователем {UserId}", currentUserId);
+            bookingMessage = "Не удалось создать запись. Попробуйте позже.";
+            isBookingSuccess = false;
+        }
+    }
+
+    // ===== КАЛЕНДАРЬ =====
+
+    private async Task LoadAppointments()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        myAppointments = await db.Appointments
+            .AsNoTracking()
+            .Include(a => a.Psychologist)
+            .Where(a => a.UserId == currentUserId && a.Status != "Canceled")
+            .OrderBy(a => a.AppointmentDate)
+            .ToListAsync();
+
+        upcomingAppointments = myAppointments
+            .Where(a => a.AppointmentDate >= DateTime.Now)
+            .Take(10)
+            .ToList();
+    }
+
+    private List<Appointment> AppointmentsOn(DateTime date) =>
+        myAppointments.Where(a => a.AppointmentDate.Date == date.Date).ToList();
+
+    private IEnumerable<DateTime?> GetCalendarCells()
+    {
+        int offset = ((int)calendarMonth.DayOfWeek + 6) % 7; // неделя с понедельника
+        int days = DateTime.DaysInMonth(calendarMonth.Year, calendarMonth.Month);
+
+        for (int i = 0; i < offset; i++) yield return null;
+        for (int d = 1; d <= days; d++)
+            yield return new DateTime(calendarMonth.Year, calendarMonth.Month, d);
+
+        int tail = (7 - (offset + days) % 7) % 7;
+        for (int i = 0; i < tail; i++) yield return null;
+    }
+
+    private void PrevMonth() => calendarMonth = calendarMonth.AddMonths(-1);
+    private void NextMonth() => calendarMonth = calendarMonth.AddMonths(1);
+    private void SelectDay(DateTime date) => selectedCalendarDay = date;
+
+    private static string PsychologistName(Appointment a)
+    {
+        var name = $"{a.Psychologist?.Name} {a.Psychologist?.Surname}".Trim();
+        return string.IsNullOrWhiteSpace(name) ? $"Психолог №{a.PsychologistId}" : name;
+    }
+
+    private static string StatusText(string status) => status switch
+    {
+        "Confirmed" => "Подтверждена",
+        "Completed" => "Завершена",
+        _ => status
+    };
+
+    private async Task CancelAppointment(int appointmentId)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var appt = await db.Appointments.FirstOrDefaultAsync(a =>
+            a.Id == appointmentId &&
+            a.UserId == currentUserId &&
+            a.Status == "Confirmed" &&
+            a.AppointmentDate > DateTime.Now);
+
+        if (appt is null)
+        {
+            bookingMessage = "Не удалось отменить запись.";
+            isBookingSuccess = false;
+            return;
+        }
+
+        appt.Status = "Canceled";
+        await db.SaveChangesAsync();
+        await LoadAppointments();
+
+        bookingMessage = "Запись отменена.";
+        isBookingSuccess = true;
     }
 
     private sealed class UserInput
