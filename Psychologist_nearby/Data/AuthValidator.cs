@@ -99,8 +99,9 @@ public static class AuthValidator
     public static bool IsPhoneValid(string? phone)
     {
         if (string.IsNullOrWhiteSpace(phone)) return true;
-        if (phone.Length != PhoneLength) return false;
-        return phone.All(char.IsDigit);
+        phone = phone.Trim();
+
+        return Regex.IsMatch(phone, @"^\+7\d{10}$");
     }
 
     // П5: Имя — только буквы (рус/англ) или пусто, ≤ 150

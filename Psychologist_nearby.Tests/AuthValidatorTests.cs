@@ -1,4 +1,5 @@
 using Psychologist_nearby.Data;
+using System.ComponentModel.DataAnnotations;
 
 namespace Psychologist_nearby.Tests;
 
@@ -99,9 +100,9 @@ public class AuthValidatorTests
     // П4: Телефон
 
     [Fact] // 13
-    public void IsPhoneValid_TenDigits_ReturnsTrue()
+    public void IsPhoneValid_CorrectFormat_ReturnsTrue()
     {
-        Assert.True(AuthValidator.IsPhoneValid("9123456789"));
+        Assert.True(AuthValidator.IsPhoneValid("+71234567890"));
     }
 
     [Fact] // 14
@@ -111,9 +112,9 @@ public class AuthValidatorTests
     }
 
     [Fact] // 15
-    public void IsPhoneValid_WrongLength_ReturnsFalse()
+    public void IsPhoneValid_TenDigits_ReturnsFalse()
     {
-        Assert.False(AuthValidator.IsPhoneValid("912345"));
+        Assert.False(AuthValidator.IsPhoneValid("1234567890"));
     }
 
     // П5: Имя
