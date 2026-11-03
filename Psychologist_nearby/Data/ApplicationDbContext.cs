@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TestAnswer> TestAnswers { get; set; }
     public DbSet<TestInterpretation> TestInterpretations { get; set; } // Добавили таблицу интерпретаций
     public DbSet<TestResult> TestResults { get; set; }
+    public DbSet<Appointment> Appointments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -71,5 +72,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(t => t.TestResults)
             .HasForeignKey(tr => tr.TestId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // --- Связи для записей на прием ---
+        builder.Entity<Appointment>()
+            .HasOne(a => a.User)
+            .WithMany() 
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Appointment>()
+            .HasOne(a => a.Psychologist)
+            .WithMany()
+            .HasForeignKey(a => a.PsychologistId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
