@@ -72,10 +72,10 @@
                                     @(string.IsNullOrWhiteSpace(result.Interpretation)
                                                             ? "Не указан"
                                                             : result.Interpretation)
-                    </p>
+                                </p>
 
                             </div>
-                                }
+                        }
 
                     </div>
                 }
@@ -166,7 +166,7 @@
                                    @bind-Value="Input.Phone"
                                    placeholder="Отсутствует"
                                    inputmode="numeric"
-                                   maxlength="10" />
+                                   maxlength="12" />
 
                         <ValidationMessage For="@(() => Input.Phone)" />
 
@@ -329,7 +329,7 @@
 
         if (!AuthValidator.IsPhoneValid(Input.Phone))
         {
-            errorMessage = "Телефон должен содержать ровно 10 цифр или быть пустым.";
+            errorMessage = "Телефон должен начинаться с +7 и затем содержать 10 цифр или быть пустым.";
             return;
         }
 

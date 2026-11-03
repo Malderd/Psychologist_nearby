@@ -1,5 +1,14 @@
 @page "/"
 
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Psychologist_nearby.Data
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
 <PageTitle>Наталья Паэглис — Психолог</PageTitle>
 
 <div class="home-container">
@@ -57,30 +66,78 @@
     <div id="reviews" class="section-container default-section">
         <h1 class="section-title">Отзывы</h1>
 
-        <div class="carousel-container">
-            <button class="carousel-btn prev-btn" @onclick="PrevReview">❮</button>
+        @if (isLoadingReviews)
+        {
+            <p class="review-message">Загрузка отзывов...</p>
+        }
+        else if (reviews.Count == 0)
+        {
+            <p class="review-message">Пока нет отзывов.</p>
+        }
+        else
+        {
+            <div class="carousel-container">
+                <button class="carousel-btn prev-btn" @onclick="PrevReview" 
+                    disabled="@(reviews.Count <= 1)">❮</button>
 
-            <div class="review-card">
-                <p class="review-text">"@reviews[currentReviewIndex].Text"</p>
-                <div class="review-author">— @reviews[currentReviewIndex].Author</div>
+                <div class="review-card">
+                    <div class="review-rating">
+                        @for (int star = 1; star <= 5; star++)
+                        {
+                            <span class="review-star">
+                                @(star <= reviews[currentReviewIndex].Rating ? "★" : "☆")
+                            </span>
+                        }
+                    </div>
+
+                    <p class="review-text">
+                        «@reviews[currentReviewIndex].TextReview»
+                    </p>
+
+                    <div class="review-author">
+                        — @GetReviewAuthor(reviews[currentReviewIndex])
+                    </div>
+
+                    <div class="review-date">
+                        @reviews[currentReviewIndex].TimeCreated.ToString("dd.MM.yyyy")
+                    </div>
+                </div>
+
+                <button class="carousel-btn next-btn" @onclick="NextReview"
+                        disabled="@(reviews.Count <= 1)"> ❯ </button>
             </div>
 
-            <button class="carousel-btn next-btn" @onclick="NextReview">❯</button>
-        </div>
+            <div class="carousel-dots">
+                @for (int i = 0; i < reviews.Count; i++)
+                {
+                    int index = i;
 
-        <div class="carousel-dots">
-            @for (int i = 0; i < reviews.Count; i++)
-            {
-                int index = i;
-                <span class="dot @(index == currentReviewIndex ? "active" : "")" @onclick="() => GoToReview(index)"></span>
-            }
-        </div>
-    </div>
+                    <span class="dot @(index == currentReviewIndex ? "active" : "")"
+                          @onclick="() => GoToReview(index)">
+                    </span>
+                }
+            </div>
+
+            <div class="review-counter">
+                @(currentReviewIndex + 1) из @reviews.Count
+            </div>
+        }
+
+        @if (isAuthenticated)
+        {
+            <div class="create-review-container">
+                <button class="btn-create-review" @onclick="OpenReviewModal">
+                    + Создать отзыв
+                </button>
+            </div>
+        }
+    </div> 
 
     <div id="price" class="section-container default-section">
         <h1 class="section-title">Стоимость</h1>
         <div class="price-cards-grid">
             <div class="price-card">
+ 
                 <h3>Диагностическая сессия</h3>
                 <div class="price-value">Бесплатно</div>
                 <p class="price-desc">Знакомство, разбор вашего запроса и определение плана работы (20-30 минут).</p>
@@ -127,47 +184,311 @@
 
 </div>
 
+@if (isReviewModalOpen)
+{
+    <div class="review-modal-overlay" @onclick="CloseReviewModal">
+        <div class="review-modal" @onclick:stopPropagation="true">
+
+            <button type="button"
+                    class="review-modal-close"
+                    @onclick="CloseReviewModal">
+                ×
+            </button>
+
+            <h2>Создать отзыв</h2>
+
+            <EditForm Model="reviewInput"
+                      OnValidSubmit="CreateReviewAsync">
+
+                <DataAnnotationsValidator />
+
+                <div class="review-form-group">
+                    <label>Ваша оценка</label>
+
+                    <div class="rating-selector">
+                        @for (int star = 1; star <= 5; star++)
+                        {
+                            int selectedStar = star;
+
+                            <button type="button"
+                                    class="rating-star @(selectedStar <= reviewInput.Rating ? "selected" : "")"
+                                    @onclick="() => SetRating(selectedStar)">
+                                ★
+                            </button>
+                        }
+                    </div>
+
+                    <ValidationMessage For="@(() => reviewInput.Rating)" />
+                </div>
+
+                <div class="review-form-group">
+                    <label for="reviewText">Ваш отзыв</label>
+
+                    <InputTextArea id="reviewText"
+                                   class="review-textarea"
+                                   @bind-Value="reviewInput.TextReview"
+                                   placeholder="Поделитесь своими впечатлениями..." />
+
+                    <ValidationMessage For="@(() => reviewInput.TextReview)" />
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(reviewError))
+                {
+                    <div class="review-error">
+                        @reviewError
+                    </div>
+                }
+
+                <button type="submit"
+                        class="btn-submit-review"
+                        disabled="@isSubmittingReview">
+                    @(isSubmittingReview ? "Отправка..." : "Отправить отзыв")
+                </button>
+
+            </EditForm>
+        </div>
+    </div>
+}
+
 @code {
+    private List<Review> reviews = new();
+
     private int currentReviewIndex = 0;
 
-    private class Review
+    private bool isLoadingReviews = true;
+    private bool isAuthenticated = false;
+    private bool isReviewModalOpen = false;
+    private bool isSubmittingReview = false;
+
+    private int? currentUserId;
+
+    private string reviewError = string.Empty;
+
+    private ReviewInput reviewInput = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        public string Author { get; set; } = string.Empty;
-        public string Text { get; set; } = string.Empty;
+        await CheckAuthenticationAsync();
+        await LoadReviewsAsync();
     }
 
-    private List<Review> reviews = new()
+    private async Task CheckAuthenticationAsync()
     {
-        new Review
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated == true;
+
+        if (!isAuthenticated)
+            return;
+
+        var userIdClaim =
+            user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (int.TryParse(userIdClaim, out int userId))
         {
-            Author = "Екатерина",
-            Text = "После первой же сессии стало намного легче. Наталья помогла мне разложить всё по полочкам и справиться с сильной тревогой предновогоднего дедлайна."
-        },
-        new Review
-        {
-            Author = "Михаил",
-            Text = "Очень бережная и профессиональная работа. За 3 месяца консультаций мы смогли полностью разобрать моё эмоциональное выгорание на работе."
-        },
-        new Review
-        {
-            Author = "Анна",
-            Text = "Спасибо Наталья! Наконец-то выстроила личные границы в отношениях с близкими. На сессиях всегда тепло, безопасно и комфортно."
+            currentUserId = userId;
         }
-    };
+        else
+        {
+            isAuthenticated = false;
+        }
+    }
+
+    private async Task LoadReviewsAsync()
+    {
+        isLoadingReviews = true;
+
+        try
+        {
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+            reviews = await db.Reviews
+                .AsNoTracking()
+                .Include(r => r.User)
+                .OrderByDescending(r => r.TimeCreated)
+                .ToListAsync();
+
+            if (reviews.Count == 0)
+                currentReviewIndex = 0;
+            else if (currentReviewIndex >= reviews.Count)
+                currentReviewIndex = 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки отзывов: {ex}");
+        }
+        finally
+        {
+            isLoadingReviews = false;
+        }
+    }
+
+    private string GetReviewAuthor(Review review)
+    {
+        if (review.User == null)
+            return "Пользователь удалён";
+
+        if (!string.IsNullOrWhiteSpace(review.User.Name))
+            return review.User.Name;
+
+        return "Пользователь";
+    }
 
     private void NextReview()
     {
+        if (reviews.Count == 0)
+            return;
+
         currentReviewIndex = (currentReviewIndex + 1) % reviews.Count;
     }
 
     private void PrevReview()
     {
+        if (reviews.Count == 0)
+            return;
+
         currentReviewIndex = (currentReviewIndex - 1 + reviews.Count) % reviews.Count;
     }
 
     private void GoToReview(int index)
     {
-        currentReviewIndex = index;
+        if (index >= 0 && index < reviews.Count)
+            currentReviewIndex = index;
+    }
+
+    // Открытие окна создания отзыва
+    private void OpenReviewModal()
+    {
+        if (!isAuthenticated || currentUserId == null)
+            return;
+
+        reviewInput = new ReviewInput();
+        reviewError = string.Empty;
+
+        isReviewModalOpen = true;
+    }
+
+    // Закрытие окна
+    private void CloseReviewModal()
+    {
+        if (isSubmittingReview)
+            return;
+
+        isReviewModalOpen = false;
+    }
+
+    // Выбор оценки
+    private void SetRating(int rating)
+    {
+        if (rating >= 1 && rating <= 5)
+            reviewInput.Rating = rating;
+    }
+
+    // Создание отзыва
+    private async Task CreateReviewAsync()
+    {
+        if (isSubmittingReview)
+            return;
+
+        isSubmittingReview = true;
+        reviewError = string.Empty;
+
+        try
+        {
+            var authState =
+                await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                reviewError = "Для создания отзыва необходимо войти в аккаунт.";
+                return;
+            }
+
+            var userIdClaim =
+                user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId))
+            {
+                reviewError = "Не удалось определить пользователя.";
+                return;
+            }
+
+            // Проверяем корректность данных
+            if (reviewInput.Rating < 1 || reviewInput.Rating > 5)
+            {
+                reviewError = "Выберите оценку от 1 до 5.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(reviewInput.TextReview) ||
+                reviewInput.TextReview.Trim().Length < 5 ||
+                reviewInput.TextReview.Trim().Length > 1000)
+            {
+                reviewError = "Текст отзыва должен содержать от 5 до 1000 символов.";
+                return;
+            }
+
+            await using var db =
+                await DbFactory.CreateDbContextAsync();
+
+            // Проверяем, что пользователь всё ещё существует
+            bool userExists = await db.Users
+                .AnyAsync(u => u.Id == userId);
+
+            if (!userExists)
+            {
+                reviewError = "Ваш аккаунт не найден.";
+                return;
+            }
+
+            var newReview = new Review
+            {
+                UserId = userId,
+                TextReview = reviewInput.TextReview.Trim(),
+                Rating = reviewInput.Rating,
+                TimeCreated = DateTime.Now
+            };
+
+            db.Reviews.Add(newReview);
+
+            await db.SaveChangesAsync();
+
+            isReviewModalOpen = false;
+
+            // Обновляем список отзывов
+            currentReviewIndex = 0;
+            await LoadReviewsAsync();
+
+            reviewInput = new ReviewInput();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка сохранения отзыва: {ex}");
+
+            reviewError = "Не удалось сохранить отзыв. Попробуйте ещё раз.";
+        }
+        finally
+        {
+            isSubmittingReview = false;
+        }
+    }
+
+    private class ReviewInput
+    {
+        [Required(ErrorMessage = "Введите текст отзыва.")]
+        [StringLength(1000, MinimumLength = 5,
+            ErrorMessage = "Отзыв должен содержать от 5 до 1000 символов."
+        )]
+        public string TextReview { get; set; } = string.Empty;
+
+        [Range(1, 5, ErrorMessage = "Выберите оценку от 1 до 5.")]
+        public int Rating { get; set; }
     }
 
     private void HandleSubmit()
