@@ -105,7 +105,7 @@
 
                             <div class="form-group">
                                 <label for="phone" class="form-label">Телефон</label>
-                                <InputText id="phone" class="form-control" @bind-Value="Input.Phone" placeholder="Отсутствует" inputmode="numeric" maxlength="10" />
+                                <InputText id="phone" class="form-control" @bind-Value="Input.Phone" placeholder="Отсутствует" inputmode="numeric" maxlength="12" />
                                 <ValidationMessage For="@(() => Input.Phone)" class="text-danger" />
                             </div>
 
@@ -410,9 +410,21 @@
     private async Task SaveChanges()
     {
         if (isSaving) return;
-        if (!AuthValidator.IsNameValid(Input.Name) || !AuthValidator.IsSurnameValid(Input.Surname) || !AuthValidator.IsPhoneValid(Input.Phone))
+        if (!AuthValidator.IsNameValid(Input.Name))
         {
-            errorMessage = "Проверьте правильность введенных данных (имя, фамилия, телефон).";
+            errorMessage = "Имя должно содержать только русские, английские буквы или быть пустым (до 150 символов)";
+            return;
+        }
+
+        if (!AuthValidator.IsSurnameValid(Input.Surname))
+        {
+            errorMessage = "Фамилия должна содержать только русские, английские буквы или быть пустым (до 150 символов)";
+            return;
+        }
+
+        if (!AuthValidator.IsPhoneValid(Input.Phone))
+        {
+            errorMessage = "Телефон должен начинаться с +7 и затем иметь 10 цифр или быть пустым.";
             return;
         }
         isSaving = true;
