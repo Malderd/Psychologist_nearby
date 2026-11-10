@@ -95,7 +95,7 @@
                                 <label for="name" class="form-label">Имя</label>
                                 @if (isPsychologist)
                                 {
-                                    <input id="name" class="form-control" value="@Input.Name"readonly />
+                                    <input id="name" class="form-control" value="@Input.Name" readonly />
                                 }
                                 else
                                 {
@@ -149,8 +149,8 @@
                     <section class="statistics-card">
                         <h2 class="statistics-title">
                             @(isPsychologist
-                                                ? "Статистика всех тестирований"
-                                                : "Моя статистика тестирования")
+                                ? "Статистика всех тестирований"
+                                : "Моя статистика тестирования")
                         </h2> 
 
                         @if (testResults.Count == 0)
@@ -158,8 +158,8 @@
                             <div class="statistics-empty">
                                 <p>
                                     @(isPsychologist
-                                                 ? "На сайте пока нет результатов тестирования."
-                                                 : "Вы пока не проходили тестирование.")
+                                        ? "На сайте пока нет результатов тестирования."
+                                        : "Вы пока не проходили тестирование.")
                                 </p>               
                             </div>
                         }
@@ -173,8 +173,24 @@
                                         @if (isPsychologist)
                                         {
                                             <p>
-                                                <strong>ID пользователя:</strong>
-                                                @result.UserId
+                                                <strong>Пользователь: </strong>
+                                                @if (result.UserId == null)
+                                                {
+                                                    <span>Аккаунт удалён</span>
+                                                }
+                                                else
+                                                {
+                                                    var userName = $"{result.User?.Name} {result.User?.Surname}".Trim();
+
+                                                    @if (string.IsNullOrWhiteSpace(userName))
+                                                    {
+                                                        <span>Имя не указано</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>@userName</span>
+                                                    }
+                                                }
                                             </p>
                                         }
                                         <p><strong>Дата прохождения:</strong> @result.TimeCreated.ToString("dd.MM.yyyy HH:mm")</p>
@@ -301,7 +317,11 @@
                                     @foreach (var a in dayItems)
                                     {
                                         <div class="appointment-row">
-                                            <span>🕒 @a.AppointmentDate.ToString("HH:mm") — @PsychologistName(a) (@StatusText(a.Status))</span>
+                                            <span>
+                                                🕒 @a.AppointmentDate.ToString("HH:mm")
+                                                — @AppointmentPerson(a)
+                                                (@StatusText(a.Status))
+                                            </span>
                                             @if (a.Status == "Confirmed" && a.AppointmentDate > DateTime.Now)
                                             {
                                                 <button type="button" class="btn-cancel" @onclick="() => CancelAppointment(a.Id)">Отменить</button>
@@ -319,7 +339,10 @@
                                 @foreach (var a in upcomingAppointments)
                                 {
                                     <div class="appointment-row">
-                                        <span>📅 @a.AppointmentDate.ToString("dd.MM.yyyy HH:mm") — @PsychologistName(a)</span>
+                                        <span>
+                                            📅 @a.AppointmentDate.ToString("dd.MM.yyyy HH:mm")
+                                            — @AppointmentPerson(a)
+                                        </span>
                                         @if (isClient &&
                                             a.Status == "Confirmed" &&
                                             a.AppointmentDate > DateTime.Now)
@@ -409,6 +432,7 @@
 
             IQueryable<TestResult> testQuery = db.TestResults
                 .AsNoTracking()
+                .Include(r => r.User)
                 .Include(r => r.Test)
                     .ThenInclude(t => t!.Answers)
                 .Include(r => r.Test)
@@ -430,8 +454,9 @@
             {
                 var psychologist = await db.Users
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(
-                        u => u.Id == PsychologistUserId);
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.Role != null &&
+                                              u.Role.Name == "Psychologist");
 
                 if (psychologist is not null)
                 {
@@ -586,6 +611,7 @@
         var query = db.Appointments
             .AsNoTracking()
             .Include(a => a.Psychologist)
+            .Include(a => a.User)
             .Where(a => a.Status != "Canceled");
 
         if (isPsychologist)
@@ -593,10 +619,15 @@
             query = query.Where(
                 a => a.PsychologistId == currentUserId);
         }
+        else if (isClient)
+        {
+            query = query.Where(a => a.UserId == currentUserId);
+        }
         else
         {
-            query = query.Where(
-                a => a.UserId == currentUserId);
+            myAppointments.Clear();
+            upcomingAppointments.Clear();
+            return;
         }
 
         myAppointments = await query
@@ -633,7 +664,14 @@
     {
         if (isPsychologist)
         {
-            return $"Клиент №{appointment.UserId}";
+            var clientName = $"{appointment.User?.Name} {appointment.User?.Surname}".Trim();
+
+            if (string.IsNullOrWhiteSpace(clientName))
+                return appointment.UserId == null
+                    ? "Аккаунт удалён"
+                    : $"Клиент №{appointment.UserId}";
+
+            return clientName;
         }
 
         return PsychologistName(appointment);
