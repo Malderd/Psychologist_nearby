@@ -27,9 +27,9 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
         if (psychologist == null || psychologist.Role?.Name != "Psychologist")
             return "Выбранный психолог не найден.";
 
-        // 1. Проверка времени: строго с 10:00 до 20:00
+        // 1. Проверка времени: строго с 10:00 до 19:00
         TimeSpan startTime = new TimeSpan(10, 0, 0);
-        TimeSpan endTime = new TimeSpan(20, 0, 0);
+        TimeSpan endTime = new TimeSpan(19, 0, 0);
         TimeSpan selectedTime = selectedDateTime.TimeOfDay;
 
         if (selectedTime < startTime || selectedTime > endTime)
@@ -51,7 +51,7 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
         int dailyCount = await _context.Appointments
             .Where(a => a.PsychologistId == psychologistId
                         && a.AppointmentDate.Date == targetDate
-                        && a.Status != "Canceled")
+                        && a.Status == "Confirmed")
             .CountAsync();
 
         if (dailyCount >= 4)
@@ -63,7 +63,7 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
         bool isSlotTaken = await _context.Appointments
             .AnyAsync(a => a.PsychologistId == psychologistId
                         && a.AppointmentDate == selectedDateTime
-                        && a.Status != "Canceled");
+                        && a.Status == "Confirmed");
 
         if (isSlotTaken)
         {
@@ -74,7 +74,7 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
         bool clientBusy = await _context.Appointments
             .AnyAsync(a => a.UserId == clientId
                         && a.AppointmentDate == selectedDateTime
-                        && a.Status != "Canceled");
+                        && a.Status == "Confirmed");
 
         if (clientBusy)
         {
