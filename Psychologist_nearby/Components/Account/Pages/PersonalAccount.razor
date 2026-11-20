@@ -13,6 +13,7 @@
 @inject ILogger<PersonalAccount> Logger
 @inject Psychologist_nearby.Data.IAuthValidator AuthValidator
 @inject AppointmentService AppointmentService
+@inject EmailSender EmailSender
 
 <PageTitle>Личный кабинет</PageTitle>
 
@@ -343,8 +344,7 @@
                                             📅 @a.AppointmentDate.ToString("dd.MM.yyyy HH:mm")
                                             — @AppointmentPerson(a)
                                         </span>
-                                        @if (isClient &&
-                                            a.Status == "Confirmed" &&
+                                        @if (a.Status == "Confirmed" &&
                                             a.AppointmentDate > DateTime.Now)
                                         {
                                             <button type="button"
@@ -416,7 +416,7 @@
             }
 
             await using var db = await DbFactory.CreateDbContextAsync();
-            
+
             var user = await db.Users
                 .AsNoTracking()
                 .Include(u => u.Role)
@@ -608,7 +608,7 @@
     private async Task LoadAppointments()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-       
+
         var query = db.Appointments
             .AsNoTracking()
             .Include(a => a.Psychologist)
@@ -693,28 +693,94 @@
 
     private async Task CancelAppointment(int appointmentId)
     {
-        if (!isClient) return;
-
-        await using var db = await DbFactory.CreateDbContextAsync();
-        var appt = await db.Appointments.FirstOrDefaultAsync(a =>
-            a.Id == appointmentId &&
-            a.UserId == currentUserId &&
-            a.Status == "Confirmed" &&
-            a.AppointmentDate > DateTime.Now);
-
-        if (appt is null)
-        {
-            bookingMessage = "Не удалось отменить запись.";
-            isBookingSuccess = false;
+        if (!isClient && !isPsychologist)
             return;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var appt = await db.Appointments
+                .Include(a => a.User)
+                .Include(a => a.Psychologist)
+                .FirstOrDefaultAsync(a =>
+                    a.Id == appointmentId &&
+                    a.Status == "Confirmed" &&
+                    a.AppointmentDate > DateTime.Now &&
+                    (isClient ? a.UserId == currentUserId
+                        : a.PsychologistId == currentUserId));
+
+            if (appt is null)
+            {
+                bookingMessage = "Не удалось отменить запись.";
+                return;
+            }
+
+            string clientName = $"{appt.User?.Name} {appt.User?.Surname}".Trim();
+
+            if (string.IsNullOrWhiteSpace(clientName))
+                clientName = "Не указано";
+
+            string clientEmail = appt.User!.Email;
+            string clientPhone = appt.User!.Phone ?? "Не указан";
+
+            string appointmentDate = appt.AppointmentDate.ToString("dd.MM.yyyy HH:mm");
+
+            appt.Status = "Canceled";
+
+            await db.SaveChangesAsync();
+
+            if (isClient)
+            {
+                string subject = "Отмена записи клиентом";
+
+                string message =
+                    $"Клиент отменил запись на приём.\n\n" +
+                    $"ФИО клиента: {clientName}\n" +
+                    $"Телефон: {clientPhone}\n" +
+                    $"Почта: {clientEmail}\n" +
+                    $"Дата и время приёма: {appointmentDate}";
+
+                await EmailSender.SendEmailAsync(
+                    "Kosty-k1980@list.ru",
+                    subject,
+                    message);
+            }
+
+            else if (isPsychologist)
+            {
+                string subject = "Отмена записи на приём";
+
+                string message =
+                    $"Здравствуйте, {clientName}!\n\n" +
+                    $"Психолог отменил вашу запись на приём.\n\n" +
+                    $"Дата и время приёма: {appointmentDate}\n\n" +
+                    $"Приносим извинения за неудобства.";
+
+                await EmailSender.SendEmailAsync(
+                    clientEmail,
+                    subject,
+                    message);
+            }
+
+            await LoadAppointments();
+
+            bookingMessage = "Запись успешно отменена. Уведомление отправлено на почту.";
+            isBookingSuccess = true;
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Ошибка отмены записи {AppointmentId} пользователем {UserId}",
+                appointmentId,
+                currentUserId);
 
-        appt.Status = "Canceled";
-        await db.SaveChangesAsync();
-        await LoadAppointments();
+            // Запись уже могла отмениться, даже если письмо не отправилось.
+            bookingMessage = "Запись отменена или произошла ошибка при отправке уведомления. Проверьте почту и состояние записи.";
+            isBookingSuccess = false;
 
-        bookingMessage = "Запись отменена.";
-        isBookingSuccess = true;
+            await LoadAppointments();
+        }
     }
 
     private sealed class UserInput
