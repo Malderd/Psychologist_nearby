@@ -8,6 +8,7 @@
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject EmailSender EmailSender
 
 <PageTitle>Наталья Паэглис — Психолог</PageTitle>
 
@@ -203,12 +204,43 @@
             </div>
 
             <div class="contacts-form-box">
-                <form @onsubmit="HandleSubmit">
-                    <input type="text" placeholder="Ваше имя" required class="form-input" />
-                    <input type="tel" placeholder="Телефон или Telegram" required class="form-input" />
-                    <textarea placeholder="Ваш вопрос или удобное время для связи" class="form-input textarea"></textarea>
-                    <button type="submit" class="btn-submit">Отправить заявку</button>
-                </form>
+                @if (isFormSuccess)
+                {
+                    <div class="success-message">
+                        Заявка успешно отправлена! Я свяжусь с вами в ближайшее время.
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="contactForm" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-group">
+                            <input type="text" @bind="contactForm.Name" placeholder="Ваше имя" class="form-input" />
+                            <ValidationMessage For="@(() => contactForm.Name)" class="validation-error" />
+                        </div>
+
+                        <div class="form-group">
+                            <input type="text" @bind="contactForm.Contact" placeholder="Телефон или Telegram" class="form-input" />
+                            <ValidationMessage For="@(() => contactForm.Contact)" class="validation-error" />
+                        </div>
+
+                        <div class="form-group">
+                            <textarea @bind="contactForm.Message" placeholder="Ваш вопрос или удобное время для связи" class="form-input textarea"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit" disabled="@isSubmittingForm">
+                            @(isSubmittingForm ? "Отправка..." : "Отправить заявку")
+                        </button>
+
+                        @if (!string.IsNullOrWhiteSpace(formError))
+                        {
+                            <div class="form-error">
+                                @formError
+                            </div>
+                        }
+                    </EditForm>
+                }
             </div>
         </div>
     </div>
@@ -296,6 +328,11 @@
     private string reviewError = string.Empty;
 
     private ReviewInput reviewInput = new();
+
+    private ContactFormModel contactForm = new();
+    private bool isSubmittingForm = false;
+    private bool isFormSuccess = false;
+    private string formError = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -503,6 +540,45 @@
         }
     }
 
+    private async Task HandleSubmit()
+    {
+        if (isSubmittingForm) return;
+
+        isSubmittingForm = true;
+        formError = string.Empty;
+
+        try
+        {
+            string targetEmail = "danielapagle4@gmail.com";
+
+            string subject = "Новая заявка с сайта (Психолог)";
+
+            string body = $@"
+                Новая заявка с сайта!
+
+                Имя: {contactForm.Name}
+                Контакт (тел/тг): {contactForm.Contact}
+                Сообщение: {contactForm.Message}
+
+                Время отправки: {DateTime.Now:dd.MM.yyyy HH:mm}
+";
+
+            await EmailSender.SendEmailAsync(targetEmail, subject, body);
+
+            isFormSuccess = true;
+            contactForm = new ContactFormModel();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка отправки формы: {ex.Message}");
+            formError = "Не удалось отправить заявку. Пожалуйста, свяжитесь со мной напрямую в Telegram.";
+        }
+        finally
+        {
+            isSubmittingForm = false;
+        }
+    }
+
     private class ReviewInput
     {
         [Required(ErrorMessage = "Введите текст отзыва.")]
@@ -515,8 +591,14 @@
         public int Rating { get; set; }
     }
 
-    private void HandleSubmit()
+    private class ContactFormModel
     {
-        // Логика отправки формы
+        [Required(ErrorMessage = "Пожалуйста, укажите ваше имя.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Пожалуйста, оставьте телефон или Telegram.")]
+        public string Contact { get; set; } = string.Empty;
+
+        public string Message { get; set; } = string.Empty;
     }
 }
