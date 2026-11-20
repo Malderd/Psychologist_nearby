@@ -33,41 +33,50 @@
             <img src="images/third.jpg" alt="Наталья Паэглис" class="avatar-image">
         </div>
 
-                <div class="section-container">
-                    <h1 class="section-title">Обо мне</h1>
+        <div class="section-container">
+            <h1 class="section-title">Обо мне</h1>
 
-                    <div class="about-card">
-                        <p class="about-text about-greeting">
-                            Приветствую! Меня зовут <strong>Наталья Паэглис</strong> — я психолог и нейротренер для женщин 40+.
-                        </p>
+            <div class="about-card">
 
-                        <p class="about-text">
-                            Я психолог-консультант и нейротренер, веду частную практику. Работаю с женщинами, которые живут «правильную» жизнь, но потеряли в ней себя. Использую КПТ и методы нейроинтеграции: сначала снимаем тревогу и напряжение, потом выстраиваем новую опору.
-                            Сама я прошла путь, который знаком многим моим клиенткам. Была администратором в отеле, работала в энергетической компании, затем 12 лет в школе: учитель, руководитель методического объединения, классный руководитель. Имею 2 высших образования — экономическое и психолого-педагогическое.
-                            В какой-то момент поняла, что хочу помогать людям иначе, прошла 2 переподготовки гособразца и ушла в частную практику. Я знаю, что менять жизнь можно и после сорока, и не один раз.
-                            Хорошо знаю, как возвращать себе ресурс и радость в обычной жизни, а не только на кушетке.
-                        </p>
+                <div class="about-block">
+                    <p class="about-text about-greeting">
+                        Приветствую! Меня зовут <strong>Наталья Паэглис</strong> — я психолог и нейротренер для женщин 40+.
+                    </p>
+                </div>
 
-                        <p class="about-text about-subheading"><strong>Кому помогаю</strong></p>
-                        <p class="about-text">
-                            Женщинам 40+ в кризисе, выгорании и тревоге. Тем, кто устал делать всё для других и не умеет для себя, кому вроде бы нельзя жаловаться, но внутри уже страшно, что так будет всегда.
-                            Хорошо знаю, как возвращать себе ресурс и радость в обычной жизни, а не только на кушетке.
-                        </p>
+                <div class="about-block">
+                    <p class="about-text">
+                        Я психолог-консультант и нейротренер, веду частную практику. Работаю с женщинами, которые живут «правильную» жизнь, но потеряли в ней себя. Использую КПТ и методы нейроинтеграции: сначала снимаем тревогу и напряжение, потом выстраиваем новую опору.
+                        Сама я прошла путь, который знаком многим моим клиенткам. Была администратором в отеле, работала в энергетической компании, затем 12 лет в школе: учитель, руководитель методического объединения, классный руководитель. Имею 2 высших образования — экономическое и психолого-педагогическое.
+                        В какой-то момент поняла, что хочу помогать людям иначе, прошла 2 переподготовки гособразца и ушла в частную практику. Я знаю, что менять жизнь можно и после сорока, и не один раз.
+                        Хорошо знаю, как возвращать себе ресурс и радость в обычной жизни, а не только на кушетке.
+                    </p>
+                </div>
 
-                        <p class="about-text about-subheading"><strong>С чем помогаю</strong></p>
-                        <p class="about-text">
-                            Помогаю вернуть энергию и опору без развала семьи, карьеры и всего, что нажито непосильным трудом.
-                        </p>
+                <div class="about-block">
+                    <p class="about-text about-subheading"><strong>Кому помогаю</strong></p>
+                    <p class="about-text">
+                        Женщинам 40+ в кризисе, выгорании и тревоге. Тем, кто устал делать всё для других и не умеет для себя, кому вроде бы нельзя жаловаться, но внутри уже страшно, что так будет всегда.
+                        Хорошо знаю, как возвращать себе ресурс и радость в обычной жизни, а не только на кушетке.
+                    </p>
+                </div>
 
-                        <div class="about-highlights">
-                            <div class="highlight-item">Выгорание и усталость</div>
-                            <div class="highlight-item">Тревожность</div>
-                            <div class="highlight-item">Кризис смыслов и возрастной кризис</div>
-                            <div class="highlight-item">Ощущение, что потеряла себя</div>
-                        </div>
+                <div class="about-block">
+                    <p class="about-text about-subheading"><strong>С чем помогаю</strong></p>
+                    <p class="about-text">
+                        Помогаю вернуть энергию и опору без развала семьи, карьеры и всего, что нажито непосильным трудом.
+                    </p>
+
+                    <div class="about-highlights">
+                        <div class="highlight-item">Выгорание и усталость</div>
+                        <div class="highlight-item">Тревожность</div>
+                        <div class="highlight-item">Кризис смыслов и возрастной кризис</div>
+                        <div class="highlight-item">Ощущение, что потеряла себя</div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
     <div id="requests" class="section-container requests-section">
         <h1 class="section-title">Запросы с которыми я работаю</h1>
@@ -95,8 +104,10 @@
         else
         {
             <div class="carousel-container">
-                <button class="carousel-btn prev-btn" @onclick="PrevReview" 
-                    disabled="@(reviews.Count <= 1)">❮</button>
+                <button class="carousel-btn prev-btn" @onclick="PrevReview"
+                        disabled="@(reviews.Count <= 1)">
+                    ❮
+                </button>
 
                 <div class="review-card">
                     <div class="review-rating">
@@ -122,7 +133,9 @@
                 </div>
 
                 <button class="carousel-btn next-btn" @onclick="NextReview"
-                        disabled="@(reviews.Count <= 1)"> ❯ </button>
+                        disabled="@(reviews.Count <= 1)">
+                    ❯
+                </button>
             </div>
 
             <div class="carousel-dots">
@@ -149,13 +162,12 @@
                 </button>
             </div>
         }
-    </div> 
+    </div>
 
     <div id="price" class="section-container default-section">
         <h1 class="section-title">Стоимость</h1>
         <div class="price-cards-grid">
             <div class="price-card">
- 
                 <h3>Диагностическая сессия</h3>
                 <div class="price-value">Бесплатно</div>
                 <p class="price-desc">Знакомство, разбор вашего запроса и определение плана работы (20-30 минут).</p>
@@ -379,7 +391,6 @@
             currentReviewIndex = index;
     }
 
-    // Открытие окна создания отзыва
     private void OpenReviewModal()
     {
         if (!isAuthenticated || currentUserId == null)
@@ -391,7 +402,6 @@
         isReviewModalOpen = true;
     }
 
-    // Закрытие окна
     private void CloseReviewModal()
     {
         if (isSubmittingReview)
@@ -400,14 +410,12 @@
         isReviewModalOpen = false;
     }
 
-    // Выбор оценки
     private void SetRating(int rating)
     {
         if (rating >= 1 && rating <= 5)
             reviewInput.Rating = rating;
     }
 
-    // Создание отзыва
     private async Task CreateReviewAsync()
     {
         if (isSubmittingReview)
@@ -438,7 +446,6 @@
                 return;
             }
 
-            // Проверяем корректность данных
             if (reviewInput.Rating < 1 || reviewInput.Rating > 5)
             {
                 reviewError = "Выберите оценку от 1 до 5.";
@@ -456,7 +463,6 @@
             await using var db =
                 await DbFactory.CreateDbContextAsync();
 
-            // Проверяем, что пользователь всё ещё существует
             bool userExists = await db.Users
                 .AnyAsync(u => u.Id == userId);
 
@@ -480,7 +486,6 @@
 
             isReviewModalOpen = false;
 
-            // Обновляем список отзывов
             currentReviewIndex = 0;
             await LoadReviewsAsync();
 
