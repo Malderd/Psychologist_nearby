@@ -37,7 +37,7 @@ public class EmailSender
                 EnableSsl = true
             };
 
-            var mailMessage = new MailMessage
+            using var mailMessage = new MailMessage
             {
                 From = new MailAddress(smtpUser, "Psychologist Nearby"),
                 Subject = subject,
