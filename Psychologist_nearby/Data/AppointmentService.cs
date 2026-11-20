@@ -10,6 +10,23 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
 
     public async Task<string?> CreateAppointmentAsync(int clientId, int psychologistId, DateTime selectedDateTime)
     {
+        var client = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Id == clientId);
+
+        if (client == null)
+            return "Пользователь не найден.";
+
+        if (client.Role?.Name != "Client")
+            return "Только клиенты могут записываться на приём.";
+
+        var psychologist = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Id == psychologistId);
+
+        if (psychologist == null || psychologist.Role?.Name != "Psychologist")
+            return "Выбранный психолог не найден.";
+
         // 1. Проверка времени: строго с 10:00 до 20:00
         TimeSpan startTime = new TimeSpan(10, 0, 0);
         TimeSpan endTime = new TimeSpan(20, 0, 0);

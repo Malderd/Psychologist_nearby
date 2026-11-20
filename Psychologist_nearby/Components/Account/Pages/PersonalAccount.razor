@@ -1,5 +1,6 @@
 @page "/Account/PersonalAccount"
 @rendermode InteractiveServer
+
 @using System.Security.Claims
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.EntityFrameworkCore
@@ -67,7 +68,9 @@
                 @if (activeTab == "profile")
                 {
                     <section class="account-card">
-                        <h1 class="account-title">Личные данные</h1>
+                        <h1 class="account-title">
+                            @(isPsychologist ? "Профиль психолога" : "Личные данные")
+                        </h1>
 
                         @if (!string.IsNullOrEmpty(errorMessage))
                         {
@@ -90,25 +93,53 @@
 
                             <div class="form-group">
                                 <label for="name" class="form-label">Имя</label>
-                                <InputText id="name" class="form-control" @bind-Value="Input.Name" placeholder="Отсутствует" maxlength="150" />
-                                <ValidationMessage For="@(() => Input.Name)" class="text-danger" />
+                                @if (isPsychologist)
+                                {
+                                    <input id="name" class="form-control" value="@Input.Name" readonly />
+                                }
+                                else
+                                {
+                                    <InputText id="name" class="form-control" @bind-Value="Input.Name" placeholder="Отсутствует" maxlength="150" />
+
+                                    <ValidationMessage For="@(() => Input.Name)" class="text-danger" />
+                                }
                             </div>
 
                             <div class="form-group">
                                 <label for="surname" class="form-label">Фамилия</label>
-                                <InputText id="surname" class="form-control" @bind-Value="Input.Surname" placeholder="Отсутствует" maxlength="150" />
-                                <ValidationMessage For="@(() => Input.Surname)" class="text-danger" />
+                                @if (isPsychologist)
+                                {
+                                    <input id="surname" class="form-control" value="@Input.Surname" readonly />
+                                }
+                                else
+                                {
+                                    <InputText id="surname" class="form-control" @bind-Value="Input.Surname" placeholder="Отсутствует" maxlength="150" />
+
+                                    <ValidationMessage For="@(() => Input.Surname)" class="text-danger" />
+                                }
                             </div>
 
                             <div class="form-group">
                                 <label for="phone" class="form-label">Телефон</label>
-                                <InputText id="phone" class="form-control" @bind-Value="Input.Phone" placeholder="Отсутствует" inputmode="numeric" maxlength="12" />
-                                <ValidationMessage For="@(() => Input.Phone)" class="text-danger" />
+                                @if (isPsychologist)
+                                {
+                                    <input id="phone" class="form-control" value="@Input.Phone"  readonly />
+                                }
+                                else
+                                {
+                                    <InputText id="phone" class="form-control" @bind-Value="Input.Phone" placeholder="Отсутствует" inputmode="numeric" maxlength="12" />
+
+                                    <ValidationMessage For="@(() => Input.Phone)" class="text-danger" />
+                                }
                             </div>
 
-                            <button type="submit" class="btn-save" disabled="@isSaving">
-                                @(isSaving ? "Сохранение..." : "Сохранить")
-                            </button>
+                            @if (isClient)
+                            {
+                                <button type="submit" class="btn-save" disabled="@isSaving">
+
+                                    @(isSaving ? "Сохранение..." : "Сохранить")
+                                </button>
+                            }
                         </EditForm>
                     </section>
                 }
@@ -116,12 +147,20 @@
                 @if (activeTab == "statistics")
                 {
                     <section class="statistics-card">
-                        <h2 class="statistics-title">Статистика тестирования</h2>
+                        <h2 class="statistics-title">
+                            @(isPsychologist
+                                ? "Статистика всех тестирований"
+                                : "Моя статистика тестирования")
+                        </h2> 
 
                         @if (testResults.Count == 0)
                         {
                             <div class="statistics-empty">
-                                <p>Вы пока не проходили тестирование.</p>
+                                <p>
+                                    @(isPsychologist
+                                        ? "На сайте пока нет результатов тестирования."
+                                        : "Вы пока не проходили тестирование.")
+                                </p>               
                             </div>
                         }
                         else
@@ -131,6 +170,29 @@
                                 {
                                     <article class="statistics-item">
                                         <h3 class="statistics-test-title">@(result.Test?.Title ?? "Тест не найден")</h3>
+                                        @if (isPsychologist)
+                                        {
+                                            <p>
+                                                <strong>Пользователь: </strong>
+                                                @if (result.UserId == null)
+                                                {
+                                                    <span>Аккаунт удалён</span>
+                                                }
+                                                else
+                                                {
+                                                    var userName = $"{result.User?.Name} {result.User?.Surname}".Trim();
+
+                                                    @if (string.IsNullOrWhiteSpace(userName))
+                                                    {
+                                                        <span>Имя не указано</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>@userName</span>
+                                                    }
+                                                }
+                                            </p>
+                                        }
                                         <p><strong>Дата прохождения:</strong> @result.TimeCreated.ToString("dd.MM.yyyy HH:mm")</p>
                                         <p><strong>Набрано баллов:</strong> @result.TotalScore из @GetMaxScore(result)</p>
                                         <p><strong>Результат:</strong> @(string.IsNullOrWhiteSpace(result.Interpretation) ? "Не указан" : result.Interpretation)</p>
@@ -144,7 +206,11 @@
                 @if (activeTab == "schedule")
                 {
                     <section class="account-card">
-                        <h2 class="account-title">Расписание и запись на прием</h2>
+                        <h2 class="account-title">
+                            @(isPsychologist
+                                ? "Расписание моих приёмов"
+                                : "Расписание и запись на прием")
+                        </h2>
 
                         @if (!string.IsNullOrEmpty(bookingMessage))
                         {
@@ -153,45 +219,50 @@
                             </div>
                         }
 
-                        <p class="text-muted">Правила записи: с 10:00 до 19:00, строго на ровный час, не более 4 записей в день.</p>
+                        @if (isClient)
+                        {
+                            <p class="text-muted">Правила записи: с 10:00 до 19:00, строго на ровный час, не более 4 записей в день.</p>
 
-                        <div class="row">
-                            <div class="form-group col-md-6 mb-3">
-                                <label class="form-label">Выберите дату сеанса:</label>
-                                <input type="date"
-                                       value="@selectedDateOnly.ToString("yyyy-MM-dd")"
-                                       @onchange="OnDateChanged"
-                                       class="form-control"
-                                       min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <div class="row">
+                                <div class="form-group col-md-6 mb-3">
+                                    <label class="form-label">Выберите дату сеанса:</label>
+                                    <input type="date"
+                                           value="@selectedDateOnly.ToString("yyyy-MM-dd")"
+                                           @onchange="OnDateChanged"
+                                           class="form-control"
+                                           min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                </div>
+
+                                <div class="form-group col-md-6 mb-3">
+                                    <label class="form-label">Выберите доступный час:</label>
+                                    <select @bind="selectedHour" class="form-select">
+                                        @for (int h = 10; h <= 19; h++)
+                                        {
+                                            <option value="@h">@($"{h}:00")</option>
+                                        }
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="form-group col-md-6 mb-3">
-                                <label class="form-label">Выберите доступный час:</label>
-                                <select @bind="selectedHour" class="form-select">
-                                    @for (int h = 10; h <= 19; h++)
-                                    {
-                                        <option value="@h">@($"{h}:00")</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
+                            @if (psychologistName is not null)
+                            {
+                                <p class="mb-3"><strong>Специалист:</strong> @psychologistName</p>
+                            }
+                            else
+                            {
+                                <p class="mb-3 text-muted">Специалист не найден. Запись временно недоступна.</p>
+                            }
 
-                        @if (psychologistName is not null)
-                        {
-                            <p class="mb-3"><strong>Специалист:</strong> @psychologistName</p>
+                            <button type="button" class="btn-save" @onclick="BookAppointmentSlot" disabled="@(targetPsychologistId == 0)">
+                                Записаться на сеанс
+                            </button>
                         }
-                        else
-                        {
-                            <p class="mb-3 text-muted">Специалист не найден. Запись временно недоступна.</p>
-                        }
-
-                        <button type="button" class="btn-save" @onclick="BookAppointmentSlot" disabled="@(targetPsychologistId == 0)">
-                            Записаться на сеанс
-                        </button>
 
                         <hr class="my-4" />
 
-                        <h3 class="calendar-section-title">Мои записи</h3>
+                        <h3 class="calendar-section-title">
+                            @(isPsychologist ? "Записи к вам" : "Мои записи")
+                        </h3>
 
                         <div class="calendar-header">
                             <button type="button" class="calendar-nav" @onclick="PrevMonth">‹</button>
@@ -215,6 +286,7 @@
                                 {
                                     var date = day.Value;
                                     var items = AppointmentsOn(date);
+
                                     var cls = "calendar-cell"
                                     + (date == DateTime.Today ? " today" : "")
                                     + (items.Count > 0 ? " has-appointments" : "")
@@ -245,7 +317,11 @@
                                     @foreach (var a in dayItems)
                                     {
                                         <div class="appointment-row">
-                                            <span>🕒 @a.AppointmentDate.ToString("HH:mm") — @PsychologistName(a) (@StatusText(a.Status))</span>
+                                            <span>
+                                                🕒 @a.AppointmentDate.ToString("HH:mm")
+                                                — @AppointmentPerson(a)
+                                                (@StatusText(a.Status))
+                                            </span>
                                             @if (a.Status == "Confirmed" && a.AppointmentDate > DateTime.Now)
                                             {
                                                 <button type="button" class="btn-cancel" @onclick="() => CancelAppointment(a.Id)">Отменить</button>
@@ -263,8 +339,20 @@
                                 @foreach (var a in upcomingAppointments)
                                 {
                                     <div class="appointment-row">
-                                        <span>📅 @a.AppointmentDate.ToString("dd.MM.yyyy HH:mm") — @PsychologistName(a)</span>
-                                        <button type="button" class="btn-cancel" @onclick="() => CancelAppointment(a.Id)">Отменить</button>
+                                        <span>
+                                            📅 @a.AppointmentDate.ToString("dd.MM.yyyy HH:mm")
+                                            — @AppointmentPerson(a)
+                                        </span>
+                                        @if (isClient &&
+                                            a.Status == "Confirmed" &&
+                                            a.AppointmentDate > DateTime.Now)
+                                        {
+                                            <button type="button"
+                                                    class="btn-cancel"
+                                                    @onclick="() => CancelAppointment(a.Id)">
+                                                Отменить
+                                            </button>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -279,8 +367,16 @@
 @code {
     private string activeTab = "profile";
 
+    private int currentUserId;
+    private string currentUserRole = string.Empty;
+
+    private bool isPsychologist =>
+        currentUserRole == "Psychologist";
+
+    private bool isClient =>
+        currentUserRole == "Client";
+
     private UserInput Input { get; set; } = new();
-    private List<TestResult> testResults = new();
 
     private bool isLoading = true;
     private bool isSaving;
@@ -288,7 +384,8 @@
 
     private string? errorMessage;
     private string? successMessage;
-    private int currentUserId;
+
+    private List<TestResult> testResults = new();
 
     private DateTime selectedDateOnly = DateTime.Today;
     private int selectedHour = 10;
@@ -319,37 +416,61 @@
             }
 
             await using var db = await DbFactory.CreateDbContextAsync();
+            
             var user = await db.Users
                 .AsNoTracking()
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
             if (user is null)
             {
                 errorMessage = "Пользователь не найден.";
                 return;
             }
 
-            testResults = await db.TestResults
+            currentUserRole = user.Role?.Name ?? string.Empty;
+
+            IQueryable<TestResult> testQuery = db.TestResults
                 .AsNoTracking()
+                .Include(r => r.User)
                 .Include(r => r.Test)
-                .ThenInclude(t => t!.Answers)
+                    .ThenInclude(t => t!.Answers)
                 .Include(r => r.Test)
-                .ThenInclude(t => t!.Questions)
-                .Where(r => r.UserId == currentUserId)
-                .OrderByDescending(r => r.TimeCreated)
-                .ToListAsync();
+                    .ThenInclude(t => t!.Questions);
+
+            if (isClient)
+            {
+                testQuery = testQuery.Where(
+                    r => r.UserId == currentUserId);
+            }
+
+            testResults = await testQuery
+                 .OrderByDescending(r => r.TimeCreated)
+                 .ToListAsync();
 
             await LoadAppointments();
 
-            var psychologist = await db.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == PsychologistUserId);
-
-            if (psychologist is not null)
+            if (isClient)
             {
-                targetPsychologistId = psychologist.Id;
-                psychologistName = $"{psychologist.Name} {psychologist.Surname}".Trim();
-                if (string.IsNullOrWhiteSpace(psychologistName))
-                    psychologistName = "Психолог";
+                var psychologist = await db.Users
+                    .AsNoTracking()
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.Role != null &&
+                                              u.Role.Name == "Psychologist");
+
+
+                if (psychologist is not null)
+                {
+                    targetPsychologistId = psychologist.Id;
+
+                    psychologistName =
+                        $"{psychologist.Name} {psychologist.Surname}".Trim();
+
+                    if (string.IsNullOrWhiteSpace(psychologistName))
+                    {
+                        psychologistName = "Психолог";
+                    }
+                }
             }
 
             Input = new UserInput
@@ -359,6 +480,7 @@
                 Surname = user.Surname ?? string.Empty,
                 Phone = user.Phone ?? string.Empty
             };
+
             isUserLoaded = true;
         }
         catch (Exception ex)
@@ -400,6 +522,7 @@
 
     private async Task SaveChanges()
     {
+        if (!isClient) return;
         if (isSaving) return;
         if (!AuthValidator.IsNameValid(Input.Name))
         {
@@ -449,6 +572,9 @@
 
     private async Task BookAppointmentSlot()
     {
+
+        if (!isClient) return;
+
         bookingMessage = null;
         isBookingSuccess = false;
 
@@ -482,10 +608,30 @@
     private async Task LoadAppointments()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        myAppointments = await db.Appointments
+       
+        var query = db.Appointments
             .AsNoTracking()
             .Include(a => a.Psychologist)
-            .Where(a => a.UserId == currentUserId && a.Status != "Canceled")
+            .Include(a => a.User)
+            .Where(a => a.Status != "Canceled");
+
+        if (isPsychologist)
+        {
+            query = query.Where(
+                a => a.PsychologistId == currentUserId);
+        }
+        else if (isClient)
+        {
+            query = query.Where(a => a.UserId == currentUserId);
+        }
+        else
+        {
+            myAppointments.Clear();
+            upcomingAppointments.Clear();
+            return;
+        }
+
+        myAppointments = await query
             .OrderBy(a => a.AppointmentDate)
             .ToListAsync();
 
@@ -515,6 +661,23 @@
     private void NextMonth() => calendarMonth = calendarMonth.AddMonths(1);
     private void SelectDay(DateTime date) => selectedCalendarDay = date;
 
+    private string AppointmentPerson(Appointment appointment)
+    {
+        if (isPsychologist)
+        {
+            var clientName = $"{appointment.User?.Name} {appointment.User?.Surname}".Trim();
+
+            if (string.IsNullOrWhiteSpace(clientName))
+                return appointment.UserId == null
+                    ? "Аккаунт удалён"
+                    : $"Клиент №{appointment.UserId}";
+
+            return clientName;
+        }
+
+        return PsychologistName(appointment);
+    }
+
     private static string PsychologistName(Appointment a)
     {
         var name = $"{a.Psychologist?.Name} {a.Psychologist?.Surname}".Trim();
@@ -530,6 +693,8 @@
 
     private async Task CancelAppointment(int appointmentId)
     {
+        if (!isClient) return;
+
         await using var db = await DbFactory.CreateDbContextAsync();
         var appt = await db.Appointments.FirstOrDefaultAsync(a =>
             a.Id == appointmentId &&
