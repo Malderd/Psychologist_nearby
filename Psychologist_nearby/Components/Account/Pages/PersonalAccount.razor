@@ -668,9 +668,7 @@
             var clientName = $"{appointment.User?.Name} {appointment.User?.Surname}".Trim();
 
             if (string.IsNullOrWhiteSpace(clientName))
-                return appointment.UserId == null
-                    ? "Аккаунт удалён"
-                    : $"Клиент №{appointment.UserId}";
+                return $"Клиент №{appointment.UserId}";
 
             return clientName;
         }

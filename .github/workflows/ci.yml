@@ -24,6 +24,9 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
+      - name: Static analysis
+        run: dotnet build --no-restore -c Release -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest-all -p:EnforceCodeStyleInBuild=true -p:RunAnalyzersDuringBuild=true -warnaserror:CS0472
+
       - name: Test
         run: dotnet test --no-build -c Release --verbosity normal --collect:"XPlat Code Coverage"
 
