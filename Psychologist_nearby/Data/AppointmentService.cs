@@ -47,16 +47,16 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
 
         var targetDate = selectedDateTime.Date;
 
-        // 2. Проверка: не больше 4 записей у психолога в этот день
+        // 2. Проверка: не больше 5 записей у психолога в этот день
         int dailyCount = await _context.Appointments
             .Where(a => a.PsychologistId == psychologistId
                         && a.AppointmentDate.Date == targetDate
                         && a.Status == "Confirmed")
             .CountAsync();
 
-        if (dailyCount >= 4)
+        if (dailyCount >= 5)
         {
-            return "У этого психолога на этот день уже исчерпан лимит записей (максимум 4 в день).";
+            return "У этого психолога на этот день уже исчерпан лимит записей (максимум 5 в день).";
         }
 
         // 3. Проверка на дубликаты / занятость точного времени

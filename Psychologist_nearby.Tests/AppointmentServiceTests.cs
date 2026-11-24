@@ -98,4 +98,77 @@ public class AppointmentServiceTests
         Assert.Null(retryResult);
         Assert.Equal(1, await context.Appointments.CountAsync());
     }
+    [Theory]
+    [InlineData(4, true)]
+    [InlineData(5, false)]
+    public async Task CreateAppointmentAsync_DailyLimit_CR001(
+    int existingCount, bool expectedSuccess)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var context = new ApplicationDbContext(options);
+
+        context.Roles.AddRange(
+            new Role { Id = 1, Name = "Client" },
+            new Role { Id = 2, Name = "Psychologist" });
+
+        context.Users.AddRange(
+            new User
+            {
+                Id = 1,
+                Email = "client@test.local",
+                PasswordHash = "test_hash",
+                RoleId = 1,
+                IsEmailConfirmed = true
+            },
+            new User
+            {
+                Id = 2,
+                Email = "psychologist@test.local",
+                PasswordHash = "test_hash",
+                RoleId = 2,
+                IsEmailConfirmed = true
+            });
+
+        var date = DateTime.Today.AddDays(1);
+
+        for (int i = 0; i < existingCount; i++)
+        {
+            context.Appointments.Add(new Appointment
+            {
+                UserId = 1,
+                PsychologistId = 2,
+                AppointmentDate = date.AddHours(10 + i),
+                Status = "Confirmed",
+                TimeCreated = DateTime.Now
+            });
+        }
+
+        await context.SaveChangesAsync();
+
+        var service = new AppointmentService(
+            context,
+            NullLogger<AppointmentService>.Instance);
+
+        var result = await service.CreateAppointmentAsync(
+            1, 2, date.AddHours(17));
+
+        if (expectedSuccess)
+        {
+            Assert.Null(result);
+            Assert.Equal(
+                existingCount + 1,
+                await context.Appointments.CountAsync());
+        }
+        else
+        {
+            Assert.NotNull(result);
+            Assert.Contains("максимум 5", result);
+            Assert.Equal(
+                existingCount,
+                await context.Appointments.CountAsync());
+        }
+    }
 }
