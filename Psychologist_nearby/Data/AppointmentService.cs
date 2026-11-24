@@ -92,7 +92,29 @@ public class AppointmentService(ApplicationDbContext context, ILogger<Appointmen
         };
 
         _context.Appointments.Add(appointment);
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            _context.Entry(appointment).State = EntityState.Detached;
+
+            _logger.LogError(ex,
+                "Ошибка сохранения записи к психологу.");
+
+            return "Не удалось сохранить запись. Попробуйте позже.";
+        }
+        catch (TimeoutException ex)
+        {
+            _context.Entry(appointment).State = EntityState.Detached;
+
+            _logger.LogError(ex,
+                "Превышено время ожидания при сохранении записи.");
+
+            return "Превышено время ожидания. Попробуйте позже.";
+        }
 
         _logger.LogInformation("Клиент ID {ClientId} успешно записан к психологу ID {PsychologistId} на {Date}", clientId, psychologistId, selectedDateTime);
 
