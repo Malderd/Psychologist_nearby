@@ -171,4 +171,43 @@ public class AppointmentServiceTests
                 await context.Appointments.CountAsync());
         }
     }
+    [Fact]
+    public async Task RepeatedDatabaseFailures_Diagnostics()
+    {
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
+
+        await CreateAppointmentAsync_WhenDatabaseFails(
+            AppointmentFault.DatabaseError);
+
+        process.Refresh();
+
+        long memoryBefore = process.WorkingSet64;
+        int threadsBefore = process.Threads.Count;
+        int handlesBefore = process.HandleCount;
+
+        for (int i = 0; i < 20; i++)
+        {
+            await CreateAppointmentAsync_WhenDatabaseFails(
+                AppointmentFault.DatabaseError);
+
+            await CreateAppointmentAsync_WhenDatabaseFails(
+                AppointmentFault.Timeout);
+        }
+
+        await Task.Delay(30000);
+
+        process.Refresh();
+
+        Console.WriteLine(
+            $"Memory before: {memoryBefore / 1048576.0:F2} MB");
+
+        Console.WriteLine(
+            $"Memory after: {process.WorkingSet64 / 1048576.0:F2} MB");
+
+        Console.WriteLine(
+            $"Threads: {threadsBefore} -> {process.Threads.Count}");
+
+        Console.WriteLine(
+            $"Handles: {handlesBefore} -> {process.HandleCount}");
+    }
 }
