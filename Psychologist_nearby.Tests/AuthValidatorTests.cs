@@ -61,7 +61,7 @@ public class AuthValidatorTests
     [Fact] // 7: граница — длиннее 40
     public void IsPasswordValid_TooLong_ReturnsFalse()
     {
-        string pwd = "Aa1!" + new string('x', 36);
+        string pwd = "Aa1!" + new string('x', 37);
         Assert.False(AuthValidator.IsPasswordValid(pwd, out _));
     }
 
@@ -183,6 +183,25 @@ public class AuthValidatorTests
 
         Assert.True(BCrypt.Net.BCrypt.Verify(password, hash));
         Assert.False(BCrypt.Net.BCrypt.Verify("Wrong123!", hash));
+    }
+
+    [Fact]
+    public void IsPasswordValid_MaxLength40_ReturnsTrue()
+    {
+        string password = "Aa1!" + new string('x', 36);
+
+        Assert.Equal(40, password.Length);
+        Assert.True(AuthValidator.IsPasswordValid(password, out _));
+    }
+
+    [Fact]
+    public void RegexAuthValidator_MaxLength40_ReturnsTrue()
+    {
+        var validator = new RegexAuthValidator();
+        string password = "Aa1!" + new string('x', 36);
+
+        Assert.Equal(40, password.Length);
+        Assert.True(validator.IsPasswordValid(password, out _));
     }
 
 }
