@@ -14,7 +14,7 @@ public class EmailSender
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(string toEmail, string subject, string message)
+    public virtual async Task SendEmailAsync(string toEmail, string subject, string message)
     {
         try
         {
