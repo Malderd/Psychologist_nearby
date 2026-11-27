@@ -130,11 +130,9 @@
             else
             {
                 // Генерация 6-значного кода
-                string code = new Random().Next(100000, 999999).ToString();
-
-                user.EmailConfirmationCode = code;
-                user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
-                await DbContext.SaveChangesAsync();
+                string code = System.Security.Cryptography
+                    .RandomNumberGenerator.GetInt32(100000, 1000000)
+                    .ToString();
 
                 try
                 {
@@ -146,14 +144,16 @@
                 }
                 catch
                 {
-                    user.EmailConfirmationCode = null;
-                    user.CodeExpiryTime = null;
-                    await DbContext.SaveChangesAsync();
-
                     errorMessage =
                         "Не удалось отправить код на почту. Попробуйте позже.";
                     return;
                 }
+
+                // Сохранение кода только после успешной отправки
+                user.EmailConfirmationCode = code;
+                user.CodeExpiryTime = DateTime.Now.AddMinutes(5);
+
+                await DbContext.SaveChangesAsync();
 
                 var query = new Dictionary<string, object?>
                 {
